@@ -1,32 +1,290 @@
-# React + TypeScript + Vite
+# Negative Split — Shop Theme Builder
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A theme builder for an e-commerce storefront: pick a base colour, an accent, two
+fonts, a corner radius and a menu treatment on the left, and a running-shoe shop
+re-themes live on the right. Every combination is a shareable link.
 
-Currently, two official plugins are available:
+Built with Vite, React, TypeScript, Tailwind CSS v4 and shadcn/ui. No backend.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+> **Status.** The theme model, the palette, the WCAG contrast engine and the
+> token resolver are implemented and tested. The storefront preview, the
+> sidebar, the font pickers, the URL sync and Save & Compare are in progress.
+> The two sections this README is written around — the URL approach and the
+> custom feature — describe decisions that are settled; where the code has not
+> landed yet it is marked.
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Running it locally
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev          # http://localhost:5173
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Dev server |
+| `npm run build` | Typecheck and production build |
+| `npm test` | Unit tests (Vitest) |
+| `npm run test:watch` | Unit tests in watch mode |
+| `npm run typecheck` | TypeScript only |
+
+### Google Fonts API key — optional
+
+The font pickers use the Google Fonts Developer API to list the full catalogue.
+**The app works without a key** — it falls back to a bundled list of popular
+families — but with one you get all ~1,900 families.
+
+```bash
+cp .env.example .env.local
+# then edit .env.local:
+VITE_GOOGLE_FONTS_API_KEY=your_key_here
+```
+
+A key is free from the [Google Cloud Console](https://console.cloud.google.com/):
+create a project, enable **Web Fonts Developer API**, create an API key. No
+billing account required.
+
+Note that a `VITE_`-prefixed variable is compiled into the browser bundle and is
+therefore **public**. That is acceptable for this API — it is a read-only public
+catalogue, and the key can be restricted by HTTP referrer — but it is not a
+secret and is not treated as one here.
+
+---
+
+## The shareable URL
+
+### What it looks like
+
+```
+/?v=1&base=slate&theme=rose&radius=large&menu=inverted&accent=bold
+ &heading=Playfair%20Display&body=Inter
+```
+
+Readable, one parameter per control, with a schema version at the front.
+
+### Who owns the state
+
+**React owns the theme. The URL is a projection of it.**
+
+One `Theme` object lives in React state and is the single source of truth. When
+it changes, a debounced effect writes the URL. The URL is *read* in exactly two
+situations: on mount, and on `popstate`.
+
+The reason this is safe — and the detail that makes the whole design work — is
+that **`pushState` and `replaceState` do not fire `popstate`.** Writing to the
+URL therefore cannot trigger a read, so the data flow has no cycle:
+
+```
+user input  ──►  React state  ──►  URL        (write, debounced)
+browser nav ──►  URL          ──►  React state (read, on popstate only)
+```
+
+Two other approaches were considered:
+
+**The URL as the source of truth.** Every control writes to the URL and state is
+derived from `location.search` on each render. The shareable link then comes for
+free. Rejected because every slider nudge becomes a history operation, parsing
+runs on every render, and every component ends up coupled to the serialization
+format — which also makes the format much harder to change later.
+
+**Two-way sync**, where state watches the URL and the URL watches the state.
+This is the trap. State writes the URL, the URL write triggers a read, the read
+sets state, and you start adding guard flags to break cycles you created
+yourself. It is a familiar bug and worth designing out rather than debugging.
+
+### Readable parameters, not an encoded blob
+
+The alternative was base64 of a JSON object: shorter, tidier, and completely
+opaque. Readable parameters were chosen because a reviewer can understand the
+link at a glance and can hand-edit one value to test a specific case — which
+matters for an exercise that is partly *about* the URL. The blob would also
+still need a version marker, so it saves less than it first appears.
+
+The tradeoff accepted: longer URLs, and the parameter names become a public
+contract that older links depend on. The `v=1` parameter is how that contract
+is allowed to change — an unrecognised version falls back to the default theme
+rather than guessing at a format it does not understand.
+
+### Validation: per-field, and it never throws
+
+A shared link is untrusted input. It may have been truncated by a chat client,
+hand-edited, or produced by an older build. So each parameter is validated
+independently against its own `as const` list, and **an invalid value falls back
+to that one field's default without affecting the others.**
+
+```
+?base=chartreuse&theme=rose   →   base falls back to neutral, theme=rose is kept
+```
+
+All-or-nothing validation was rejected for the obvious reason: one bad character
+should not cost the user the other six settings they were sent.
+
+| Case | Behaviour |
+| --- | --- |
+| No query string | Default theme |
+| Unknown parameter name | Ignored |
+| Unknown value (`base=chartreuse`) | That field defaults, others kept |
+| Missing parameter | That field defaults |
+| Duplicated parameter | First occurrence wins |
+| Unencoded space in a font name | Accepted; `+` and `%20` both parse |
+| `v` missing or unrecognised | Whole theme falls back to default |
+| Absurdly long value | Rejected by length cap, field defaults |
+
+### The subtle one: fonts cannot be validated at parse time
+
+This is the part that would have shipped as a bug.
+
+`decode()` is pure and synchronous. It can check that `radius=large` is a real
+radius, because that list is a compile-time constant. It **cannot** check that
+`heading=Playfair Display` is a real Google Font, because the catalogue is
+fetched over the network and may not have arrived — or may never arrive, if
+there is no API key.
+
+Validating fonts eagerly would mean that opening a shared link replaces the
+sender's font with the default during the moments before the API responds, and
+permanently if the API is unavailable. The link would appear to work and would
+quietly be wrong.
+
+So font names are carried through decoding as **opaque unresolved strings**.
+They render immediately via the CSS fallback stack, and membership in the
+catalogue is resolved separately once a catalogue exists. A requested font is
+never overwritten with a default while the catalogue is loading or unavailable.
+
+### History: editing versus jumping
+
+Dragging through swatches uses `replaceState`, so forty small edits do not
+produce forty history entries. Shuffle and "Use saved theme" use `pushState`,
+because those are discrete jumps a user will want to undo — and **Back is the
+control they will reach for.** Without this distinction, pressing Back after a
+Shuffle leaves the app entirely.
+
+Two consequences worth stating:
+
+- Pending debounced writes are cancelled on navigation, so an in-flight write
+  cannot land after the user has already navigated away from that state.
+- **"Copy link" builds its URL from current React state**, never by reading
+  `location.search`. Reading the address bar mid-debounce would hand someone a
+  link to the theme as it was 300 ms ago.
+
+### What this does not do
+
+There is no server, so there is no short link. A theme with two long font names
+produces a URL around 150 characters — fine for a chat message, awkward on a
+printed page. With a backend the obvious next step is to POST the theme and
+return an id, keeping the readable URL as a fallback for anyone who wants to
+inspect or edit it by hand.
+
+---
+
+## The custom feature: Save & Compare
+
+### What it is
+
+A **Save for comparison** button takes a snapshot of the current theme. You keep
+editing. **Compare** then opens a read-only view with a Saved / Current toggle
+that swaps the same storefront, at the same size and scroll position, between
+the two themes. **Use saved theme** restores the snapshot into the editor;
+closing the comparison without restoring leaves your current edits untouched.
+
+### The problem it solves
+
+The builder creates a specific frustration. You try combinations, land on
+something you like, carry on exploring to see if it gets better — and then
+cannot tell whether it did. The previous version is gone, and reconstructing it
+means remembering five or six settings exactly.
+
+The practical effect is that people stop exploring. Once a theme is "good
+enough", changing it feels like it costs something. A tool whose entire purpose
+is to help someone choose confidently should not make experimentation feel
+risky, and comparison is the thing that makes it safe.
+
+It is also the honest way to answer the question users actually have, which is
+not "what does this theme look like" but "**is this one better than that one?**"
+That is a comparative judgement, and a single live preview cannot support it —
+you end up flicking settings back and forth from memory.
+
+### Why this feature and not a bigger one
+
+It reuses machinery the project already needs rather than adding a subsystem:
+
+- A snapshot is a `Theme`, so it serializes through the **same `encode()`** as
+  the shareable URL.
+- The comparison view renders the **same storefront component** with a different
+  token set — which is only possible because theming is scoped to a wrapper
+  element rather than `:root`. Two themes can therefore exist on one page at the
+  same time.
+
+Adding a feature without adding a subsystem is a better argument than bolting on
+something larger, and it puts the architecture to a second use that demonstrates
+the first was sound.
+
+### Implementation notes
+
+- **One snapshot, in memory.** Held in React state for the page session. Saving
+  again explicitly replaces it.
+- **The snapshot captures the whole `Theme`** — both fonts, base and accent
+  colour, radius, and both menu settings. Because it is the same typed object,
+  a field added later is captured automatically.
+- **Comparison is read-only and non-destructive.** Toggling between Saved and
+  Current does not touch the editable theme or the URL. Only "Use saved theme"
+  writes, and it goes through the normal state flow, so the sidebar controls,
+  the preview and the URL all update together through one code path.
+- **Compare is disabled until a snapshot exists**, rather than opening an empty
+  view and explaining why it is empty.
+- **The URL always represents the editable theme**, never the snapshot. There is
+  one meaning for the address bar and it does not change depending on which view
+  is open.
+- **Fonts for the saved theme are loaded when the snapshot is taken**, so
+  switching to the saved view does not flash a fallback face.
+
+### The tradeoff, taken deliberately
+
+**One slot, in memory, lost on reload.**
+
+The obvious "more complete" version is multiple named snapshots in
+`localStorage`. That brings a list UI, naming, deletion, storage-quota handling,
+and a migration story for when the theme shape changes — a meaningful amount of
+surface area for a feature whose real question is simply *"was the last one
+better?"* One slot answers that question directly.
+
+Persistence is also already solved by a better mechanism: the shareable URL is
+the durable way to keep a theme, and it works across devices and people, which
+`localStorage` does not. Save & Compare is deliberately the *ephemeral* tool —
+scratch space for the ten seconds when you are deciding — and the URL is the
+permanent one.
+
+---
+
+## Testing
+
+```bash
+npm test
+```
+
+Test-first on the modules where correctness is subtle and invisible: the WCAG
+contrast engine, the token resolver, URL encoding and validation, and the font
+catalogue fallback. Presentational components are covered by end-to-end tests of
+the flows that must not break, not by unit tests asserting that a click calls a
+setter.
+
+Two real defects were found by tests before any UI existed:
+
+- An exhaustive check across all 60 base × theme combinations found `rose-600`
+  and `fuchsia-600` at ~4.4:1 — below AA, and close enough that nobody would
+  have caught it by eye.
+- Setting the menu accent to the theme colour put a lime underline on a white
+  nav at **1.96:1**.
+
+Both are described in [`DECISIONS.md`](./DECISIONS.md).
+
+---
+
+## Credits
+
+Product photography: see `public/products/CREDITS.md`.
+
+Palette values are generated from the installed `tailwindcss` package by
+`scripts/generate-palette.mjs` — they are Tailwind's own values, not
+transcribed.
