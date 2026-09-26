@@ -23,7 +23,7 @@ export function ComparisonBar({
   onClose: () => void
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-border bg-muted px-6 py-2.5">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-muted px-4 py-2.5 sm:px-6">
       <div
         role="radiogroup"
         aria-label="Comparison view"
@@ -44,10 +44,11 @@ export function ComparisonBar({
         ))}
       </div>
 
-      <p className="flex-1 text-sm text-muted-foreground">
+      <p className="min-w-0 flex-1 text-sm text-muted-foreground">
         {view === 'saved'
           ? 'Showing the theme you saved. Your current edits are untouched.'
-          : 'Showing your current theme.'}
+          : 'Showing your current theme.'}{' '}
+        <span className="whitespace-nowrap">The snapshot is cleared on refresh.</span>
       </p>
 
       {/* Announced on change, because the visible difference is the whole page

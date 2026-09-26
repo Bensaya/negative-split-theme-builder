@@ -38,9 +38,10 @@ interface Props {
   value: string
   families: FontFamily[]
   onSelect: (family: string) => void
+  disabled?: boolean
 }
 
-export function FontPicker({ label, value, families, onSelect }: Props) {
+export function FontPicker({ label, value, families, onSelect, disabled }: Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
@@ -53,7 +54,17 @@ export function FontPicker({ label, value, families, onSelect }: Props) {
    * way in practice, not just in a test.
    */
   const activeRef = useRef(0)
-  const listRef = useRef<HTMLDivElement>(null)
+  /**
+   * The scroll viewport, held in STATE rather than a ref.
+   *
+   * The popover content mounts after this component, so a ref is still null
+   * when the virtualiser first asks for its scroll element - and a ref
+   * changing does not re-render, so it never asks again. The list then has a
+   * correctly sized spacer and zero rows inside it. A callback ref into state
+   * re-renders the moment the element exists, and getScrollElement() returns
+   * something real.
+   */
+  const [listEl, setListEl] = useState<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const matches = useMemo(() => {
@@ -64,7 +75,7 @@ export function FontPicker({ label, value, families, onSelect }: Props) {
 
   const virtualizer = useVirtualizer({
     count: matches.length,
-    getScrollElement: () => listRef.current,
+    getScrollElement: () => listEl,
     estimateSize: () => ROW_HEIGHT,
     overscan: OVERSCAN,
   })
@@ -96,6 +107,17 @@ export function FontPicker({ label, value, families, onSelect }: Props) {
   // most once; ensurePreviewFont dedupes in-flight requests so fast scrolling
   // cannot stampede.
   const items = virtualizer.getVirtualItems()
+
+  /**
+   * Whether the highlighted row is currently rendered.
+   *
+   * Keyboard movement scrolls the target into view, so it stays mounted. A
+   * MANUAL scroll does not: the user can wheel the active row off-screen and
+   * the virtualiser unmounts it, leaving aria-activedescendant pointing at an
+   * element that no longer exists. The attribute is dropped in that case
+   * rather than dangling; the next arrow key re-establishes it.
+   */
+  const activeIsRendered = items.some((item) => item.index === active)
   useEffect(() => {
     for (const item of items) {
       const font = matches[item.index]
@@ -108,13 +130,8 @@ export function FontPicker({ label, value, families, onSelect }: Props) {
       setQuery('')
       return
     }
-    requestAnimationFrame(() => {
-      inputRef.current?.focus()
-      // Re-measure after the open animation, in case the viewport was still
-      // being sized when the virtualiser first looked at it.
-      virtualizer.measure()
-    })
-  }, [open, virtualizer])
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }, [open])
 
   const commit = (family: string) => {
     onSelect(family)
@@ -152,8 +169,11 @@ export function FontPicker({ label, value, families, onSelect }: Props) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        className="flex w-full items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm hover:bg-accent"
+        disabled={disabled}
         aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
         <span className="text-muted-foreground">Aa</span>
         <span className="flex-1 truncate text-left">{value}</span>
@@ -169,10 +189,13 @@ export function FontPicker({ label, value, families, onSelect }: Props) {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder="Search fonts"
+            role="combobox"
             aria-label={`Search ${label.toLowerCase()}`}
+            aria-expanded="true"
+            aria-autocomplete="list"
             aria-controls={listboxId}
             aria-activedescendant={
-              matches.length ? `${listboxId}-${active}` : undefined
+              matches.length && activeIsRendered ? `${listboxId}-${active}` : undefined
             }
             className="w-full bg-transparent py-2.5 text-sm outline-none placeholder:text-muted-foreground"
           />
@@ -192,11 +215,10 @@ export function FontPicker({ label, value, families, onSelect }: Props) {
           </p>
         ) : (
           <div
-            ref={listRef}
+            ref={setListEl}
             id={listboxId}
             role="listbox"
             aria-label={label}
-            tabIndex={-1}
             style={{ height: Math.min(LIST_MAX_HEIGHT, matches.length * ROW_HEIGHT) }}
             className="overflow-y-auto overscroll-contain"
           >
@@ -211,6 +233,7 @@ export function FontPicker({ label, value, families, onSelect }: Props) {
                     role="option"
                     aria-selected={selected}
                     type="button"
+                    tabIndex={-1}
                     onClick={() => commit(font.family)}
                     onMouseEnter={() => {
                       activeRef.current = item.index

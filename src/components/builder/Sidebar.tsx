@@ -21,9 +21,15 @@ import {
  * Everything here is driven by the `as const` option lists in theme.ts, so the
  * swatches, the toggles and the Shuffle space cannot drift apart from the type.
  *
+ * Exclusive choices are NATIVE radio inputs inside a fieldset. That is not
+ * pedantry: the browser then supplies arrow-key navigation, a single tab stop
+ * per group, roving focus and the correct screen-reader semantics. A previous
+ * version hand-rolled role="radio" on buttons and got the Tab order wrong -
+ * every swatch was its own tab stop and arrow keys did nothing.
+ *
  * The builder's own chrome deliberately uses stock shadcn classes. It sits
- * outside the preview wrapper, so it keeps the default theme no matter what the
- * user picks - which is the point of scoping tokens to a wrapper.
+ * outside the preview wrapper, so it keeps the default theme no matter what
+ * the user picks - which is the point of scoping tokens to a wrapper.
  */
 
 interface Props {
@@ -34,57 +40,73 @@ interface Props {
   families: FontFamily[]
   /** Set when the catalogue could not be fetched; the bundled list is in use. */
   catalogError?: string
+  /** Comparison is read-only, so the whole panel is disabled while it is open. */
+  disabled?: boolean
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Group({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
   return (
-    <div className="flex flex-col gap-2.5">
-      <span className="text-sm font-medium">{label}</span>
+    <fieldset className="flex flex-col gap-2.5 border-0 p-0">
+      <legend className="mb-2.5 text-sm font-medium">{label}</legend>
       {children}
-    </div>
+    </fieldset>
   )
 }
 
-/** A row of colour swatches rendered in their actual palette colours. */
+/** Colour swatches, rendered in their actual palette colours. */
 function Swatches<T extends string>({
+  name,
   options,
   value,
   onSelect,
   shade,
-  label,
+  disabled,
 }: {
+  name: string
   options: readonly T[]
   value: T
   onSelect: (v: T) => void
   shade: 400 | 500
-  label: string
+  disabled?: boolean
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-x-3 gap-y-3">
-      {options.map((name) => {
-        const selected = name === value
+    <div className="flex flex-wrap gap-x-3 gap-y-3">
+      {options.map((option) => {
+        const selected = option === value
         return (
-          <button
-            key={name}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            aria-label={titleCase(name)}
-            title={titleCase(name)}
-            onClick={() => onSelect(name)}
-            className="flex w-9 flex-col items-center gap-1 focus-visible:outline-none"
+          <label
+            key={option}
+            title={titleCase(option)}
+            className="flex w-9 cursor-pointer flex-col items-center gap-1 has-disabled:cursor-not-allowed"
           >
+            <input
+              type="radio"
+              name={name}
+              value={option}
+              checked={selected}
+              disabled={disabled}
+              onChange={() => onSelect(option)}
+              className="peer sr-only"
+            />
             <span
-              className="flex size-8 items-center justify-center rounded-full ring-offset-2 ring-offset-background transition-shadow group-focus:ring-2 data-[selected=true]:ring-2 data-[selected=true]:ring-ring"
               data-selected={selected}
-              style={{ background: PALETTE[name as keyof typeof PALETTE][shade] }}
+              className="flex size-8 items-center justify-center rounded-full ring-offset-2 ring-offset-background data-[selected=true]:ring-2 data-[selected=true]:ring-ring peer-focus-visible:ring-2 peer-focus-visible:ring-foreground"
+              style={{ background: PALETTE[option as keyof typeof PALETTE][shade] }}
             >
-              {selected && <Check className="size-4 text-white drop-shadow-sm" strokeWidth={3} />}
+              {selected && (
+                <Check className="size-4 text-white drop-shadow-sm" strokeWidth={3} aria-hidden />
+              )}
             </span>
             <span className="w-full truncate text-center text-[10px] text-muted-foreground">
-              {titleCase(name)}
+              {titleCase(option)}
             </span>
-          </button>
+          </label>
         )
       })}
     </div>
@@ -93,39 +115,45 @@ function Swatches<T extends string>({
 
 /** A segmented control. Used for radius and both menu settings. */
 function Segmented<T extends string>({
+  name,
   options,
   value,
   onSelect,
   labels,
-  label,
+  disabled,
 }: {
+  name: string
   options: readonly T[]
   value: T
   onSelect: (v: T) => void
   labels?: Record<string, string>
-  label: string
+  disabled?: boolean
 }) {
   return (
     <div
-      role="radiogroup"
-      aria-label={label}
       className="grid gap-1 rounded-md border border-border bg-muted/60 p-1"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0,1fr))` }}
     >
-      {options.map((opt) => {
-        const selected = opt === value
+      {options.map((option) => {
+        const selected = option === value
         return (
-          <button
-            key={opt}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            onClick={() => onSelect(opt)}
-            data-selected={selected}
-            className="rounded-sm px-2 py-1.5 text-sm transition-colors data-[selected=false]:hover:bg-background/70 data-[selected=true]:bg-foreground data-[selected=true]:font-medium data-[selected=true]:text-background"
-          >
-            {labels?.[opt] ?? titleCase(opt)}
-          </button>
+          <label key={option} className="cursor-pointer has-disabled:cursor-not-allowed">
+            <input
+              type="radio"
+              name={name}
+              value={option}
+              checked={selected}
+              disabled={disabled}
+              onChange={() => onSelect(option)}
+              className="peer sr-only"
+            />
+            <span
+              data-selected={selected}
+              className="block rounded-sm px-2 py-1.5 text-center text-sm transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-foreground data-[selected=false]:hover:bg-background/70 data-[selected=true]:bg-foreground data-[selected=true]:font-medium data-[selected=true]:text-background"
+            >
+              {labels?.[option] ?? titleCase(option)}
+            </span>
+          </label>
         )
       })}
     </div>
@@ -139,104 +167,116 @@ export function Sidebar({
   onReset,
   families,
   catalogError,
+  disabled,
 }: Props) {
+  const isDefault = JSON.stringify(theme) === JSON.stringify(DEFAULT_THEME)
+
   return (
-    <aside className="flex w-[280px] shrink-0 flex-col gap-6 overflow-y-auto border-r border-border bg-background p-6">
+    // min-h-0 + overflow-y-auto is what keeps the panel scrollable when the
+    // window is shorter than the controls. Without min-h-0 a flex child
+    // refuses to shrink below its content and the last controls become
+    // unreachable on a 700px-tall laptop.
+    <div className="flex min-h-0 flex-col gap-6 overflow-y-auto p-6">
       <div>
         <h2 className="text-lg font-semibold tracking-tight">Customize</h2>
         <p className="text-sm text-muted-foreground">Make it yours.</p>
       </div>
 
-      <Field label="Base color">
+      <Group label="Base color">
         <Swatches
-          label="Base color"
+          name="base-color"
           options={BASE_COLORS}
           value={theme.baseColor}
           onSelect={(v) => onChange('baseColor', v)}
           shade={400}
+          disabled={disabled}
         />
-      </Field>
+      </Group>
 
-      <Field label="Theme color">
+      <Group label="Theme color">
         <Swatches
-          label="Theme color"
+          name="theme-color"
           options={THEME_COLORS}
           value={theme.themeColor}
           onSelect={(v) => onChange('themeColor', v)}
           shade={500}
+          disabled={disabled}
         />
-      </Field>
+      </Group>
 
-      <Field label="Heading font">
+      <Group label="Heading font">
         <FontPicker
           label="Heading font"
           value={theme.headingFont}
           families={families}
           onSelect={(v) => onChange('headingFont', v)}
+          disabled={disabled}
         />
-      </Field>
+      </Group>
 
-      <Field label="Body font">
+      <Group label="Body font">
         <FontPicker
           label="Body font"
           value={theme.bodyFont}
           families={families}
           onSelect={(v) => onChange('bodyFont', v)}
+          disabled={disabled}
         />
-      </Field>
+      </Group>
 
       {catalogError && (
         <p className="-mt-2 text-xs text-muted-foreground">
-          Showing {families.length} popular families. The full Google Fonts
-          catalogue is unavailable: {catalogError}.
+          Showing {families.length} popular families. The full Google Fonts catalogue is
+          unavailable: {catalogError}.
         </p>
       )}
 
-      <Field label="Radius">
+      <Group label="Radius">
         <Segmented
-          label="Radius"
+          name="radius"
           options={RADII}
           value={theme.radius}
           onSelect={(v) => onChange('radius', v)}
           labels={RADIUS_LABELS}
+          disabled={disabled}
         />
-      </Field>
+      </Group>
 
-      <Field label="Menu color">
+      <Group label="Menu color">
         <Segmented
-          label="Menu color"
+          name="menu-color"
           options={MENU_COLORS}
           value={theme.menuColor}
           onSelect={(v) => onChange('menuColor', v)}
+          disabled={disabled}
         />
-      </Field>
+      </Group>
 
-      <Field label="Menu accent">
+      <Group label="Menu accent">
         <Segmented
-          label="Menu accent"
+          name="menu-accent"
           options={MENU_ACCENTS}
           value={theme.menuAccent}
           onSelect={(v) => onChange('menuAccent', v)}
+          disabled={disabled}
         />
-      </Field>
+      </Group>
 
       <div className="mt-auto flex items-center gap-3 pt-2">
-        <Button onClick={onShuffle} className="flex-1 gap-2">
+        <Button onClick={onShuffle} disabled={disabled} className="flex-1 gap-2">
           <Dices className="size-4" aria-hidden />
           Shuffle
         </Button>
         <Button
           variant="ghost"
           onClick={onReset}
-          disabled={
-            JSON.stringify(theme) === JSON.stringify(DEFAULT_THEME)
-          }
+          disabled={disabled || isDefault}
           className="gap-1.5"
         >
           <RotateCcw className="size-3.5" aria-hidden />
           Reset
         </Button>
       </div>
-    </aside>
+    </div>
   )
 }

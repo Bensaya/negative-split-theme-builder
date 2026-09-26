@@ -13,11 +13,32 @@ import type { DecodeOutcome } from '@/url/urlCodec'
 export function Notice({
   outcome,
   onDismiss,
+  failedFonts = [],
 }: {
   outcome: DecodeOutcome
   onDismiss: () => void
+  /** Families the browser could not fetch. The request itself is unchanged. */
+  failedFonts?: string[]
 }) {
-  if (outcome.status === 'ok') return null
+  if (outcome.status === 'ok' && failedFonts.length === 0) return null
+
+  if (outcome.status === 'ok') {
+    // A font failed to load. The theme and the URL still hold the requested
+    // family: the storefront shows fallback typography, and selecting the
+    // family again retries.
+    return (
+      <div
+        role="status"
+        className="flex items-start gap-3 border-b border-border bg-muted px-4 py-2.5 text-sm sm:px-6"
+      >
+        <p className="flex-1 text-muted-foreground">
+          {failedFonts.length === 1
+            ? `${failedFonts[0]} could not be loaded, so the preview is using fallback type. Your choice is unchanged - pick it again to retry.`
+            : `${failedFonts.join(' and ')} could not be loaded, so the preview is using fallback type. Your choices are unchanged - pick them again to retry.`}
+        </p>
+      </div>
+    )
+  }
 
   const message =
     outcome.status === 'unsupported-version'
@@ -27,7 +48,7 @@ export function Notice({
   return (
     <div
       role="status"
-      className="flex items-start gap-3 border-b border-border bg-muted px-6 py-2.5 text-sm"
+      className="flex items-start gap-3 border-b border-border bg-muted px-4 py-2.5 text-sm sm:px-6"
     >
       <p className="flex-1 text-muted-foreground">{message}</p>
       <button

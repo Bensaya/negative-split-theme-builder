@@ -1,46 +1,138 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /**
- * Loads a Google font for the storefront via the CSS2 API.
+ * Loads storefront fonts, and reports honestly whether they arrived.
  *
- * Note this is the *storefront* loader: it fetches the real family at real
- * weights, under its real family name. The font picker will load a different,
- * much smaller thing (each family's `menu` subset, under an alias) so that a
- * previewed face can never be mistaken for a fully loaded one. Keeping the two
- * in separate namespaces is what stops the storefront rendering with only the
- * letters of a font's own name available.
+ * This is the *storefront* loader: it fetches the real family at real weights
+ * under its real family name. The picker loads something else entirely (a
+ * name-only subset under an alias), and preview.ts keeps those in a separate
+ * cache namespace so one can never be mistaken for the other.
  *
- * The CSS2 API needs no API key - only the *catalogue* does.
+ * The CSS2 API needs no API key. Only the *catalogue* does. So a catalogue
+ * failure never prevents a requested font from loading.
+ *
+ * Three things this gets right that a naive version does not:
+ *
+ *   1. A started request is not a loaded font. The stylesheet <link> firing
+ *      `load` only proves the CSS arrived; the font file is fetched lazily
+ *      afterwards. We wait for document.fonts.load() to settle.
+ *   2. A failure is evicted, so selecting the same family again retries
+ *      instead of being permanently marked broken.
+ *   3. A stale completion cannot overwrite a newer selection's status.
  */
 
-const loaded = new Set<string>()
+export type FontStatus = 'pending' | 'loaded' | 'failed'
 
-function ensureLink(family: string) {
-  if (!family || loaded.has(family)) return
-  loaded.add(family)
+interface Entry {
+  status: FontStatus
+  promise: Promise<FontStatus>
+}
 
-  const href =
+const cache = new Map<string, Entry>()
+
+/** Test seam. */
+export function __resetFontCache() {
+  cache.clear()
+}
+
+const bare = (family: string) => family.replace(/["\\]/g, '')
+
+function css2Href(family: string): string {
+  return (
     'https://fonts.googleapis.com/css2?family=' +
     encodeURIComponent(family).replace(/%20/g, '+') +
     ':wght@400;500;600;700&display=swap'
+  )
+}
+
+function startLoad(family: string): Promise<FontStatus> {
+  const id = `storefront-font-${family}`
+  document.getElementById(id)?.remove() // clear a previous failed attempt
 
   const link = document.createElement('link')
+  link.id = id
   link.rel = 'stylesheet'
-  link.href = href
+  link.href = css2Href(family)
   link.dataset.googleFont = family
   document.head.appendChild(link)
+
+  return new Promise<FontStatus>((resolve) => {
+    link.addEventListener(
+      'load',
+      () => {
+        // The stylesheet is here; the font file may not be. document.fonts
+        // .load() resolves once the face is actually usable, or with an empty
+        // list when nothing matched.
+        document.fonts
+          .load(`400 16px "${bare(family)}"`)
+          .then((faces) => resolve(faces.length > 0 ? 'loaded' : 'failed'))
+          .catch(() => resolve('failed'))
+      },
+      { once: true },
+    )
+    link.addEventListener(
+      'error',
+      () => {
+        link.remove()
+        resolve('failed')
+      },
+      { once: true },
+    )
+  })
+}
+
+/** Ensures a family is loaded. Dedupes in-flight requests; retries failures. */
+export function ensureFont(family: string): Promise<FontStatus> {
+  if (!family) return Promise.resolve<FontStatus>('failed')
+
+  const cached = cache.get(family)
+  if (cached && cached.status !== 'failed') return cached.promise
+
+  const promise = startLoad(family).then((status) => {
+    const entry = cache.get(family)
+    if (entry) entry.status = status
+    if (status === 'failed') cache.delete(family)
+    return status
+  })
+
+  cache.set(family, { status: 'pending', promise })
+  return promise
 }
 
 /**
- * Loads each family once. Safe to call with the same names repeatedly, and
- * accepts undefined so callers can pass an optional theme's fonts (the saved
- * comparison snapshot) without branching at the call site.
+ * Loads the given families and reports each one's status.
+ *
+ * The requested family stays in theme state and in the URL regardless: a font
+ * that will not load is a rendering problem, not a reason to silently rewrite
+ * what the user asked for.
  */
-export function useGoogleFonts(...families: (string | undefined)[]) {
-  const key = families.join('|')
+export function useGoogleFonts(...families: (string | undefined)[]): Record<string, FontStatus> {
+  const key = families.filter(Boolean).join('|')
+  const [statuses, setStatuses] = useState<Record<string, FontStatus>>({})
+
+  // Identifies the newest request, so a slow earlier one cannot report over it.
+  const generation = useRef(0)
+
   useEffect(() => {
-    for (const f of families) if (f) ensureLink(f)
-    // `key` captures the families; spreading them would change identity each render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const current = ++generation.current
+    const wanted = key ? key.split('|') : []
+    if (wanted.length === 0) return
+
+    setStatuses((prev) => {
+      const next = { ...prev }
+      for (const f of wanted) next[f] ??= 'pending'
+      return next
+    })
+
+    for (const family of wanted) {
+      void ensureFont(family).then((status) => {
+        // A completion from a superseded selection is discarded rather than
+        // flipping the status of whatever the user has chosen since.
+        if (generation.current !== current) return
+        setStatuses((prev) => (prev[family] === status ? prev : { ...prev, [family]: status }))
+      })
+    }
   }, [key])
+
+  return statuses
 }

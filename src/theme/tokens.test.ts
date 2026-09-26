@@ -5,6 +5,8 @@ import { resolveTokens } from './tokens'
 import {
   BASE_COLORS,
   DEFAULT_THEME,
+  MENU_ACCENTS,
+  MENU_COLORS,
   RADII,
   RADIUS_REM,
   THEME_COLORS,
@@ -94,6 +96,29 @@ describe('resolveTokens', () => {
           ).toBeGreaterThan(AA_NORMAL)
         }
       }
+    })
+
+    it('keeps text on the menu accent readable - the bag badge', () => {
+      // The bag count is --menu-accent-foreground on --menu-accent. Reported
+      // broken for Neutral + Indigo + Bold, so this walks the whole finite
+      // space rather than spot-checking.
+      const failures: string[] = []
+      for (const baseColor of BASE_COLORS) {
+        for (const themeColor of THEME_COLORS) {
+          for (const menuColor of MENU_COLORS) {
+            for (const menuAccent of MENU_ACCENTS) {
+              const t = resolveTokens(withTheme({ baseColor, themeColor, menuColor, menuAccent }))
+              const ratio = contrastRatio(t['--menu-accent'], t['--menu-accent-foreground'])
+              if (ratio < AA_NORMAL) {
+                failures.push(
+                  `${baseColor}/${themeColor}/${menuColor}/${menuAccent} = ${ratio.toFixed(2)}:1`,
+                )
+              }
+            }
+          }
+        }
+      }
+      expect(failures.slice(0, 8), `${failures.length} combinations fail`).toEqual([])
     })
 
     it('keeps the menu accent visible against the menu surface', () => {

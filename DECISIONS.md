@@ -221,9 +221,13 @@ the design work, which the brief grades explicitly.
 **Rejected — component tests for every control.** Roughly two extra hours to
 assert that a click calls a setter.
 
-**Rejected — tests written afterwards.** Faster to a demo, but the git history
+**Rejected - tests written afterwards.** Faster to a demo, but the git history
 would then show tests bolted on at the end, which is the opposite of the signal
 intended.
+
+**Known gap.** Manual DOM-driven verification is not re-run by CI. Several
+defects surfaced only that way, which is an argument for adding Playwright
+specs if this went further than a take-home.
 
 ---
 

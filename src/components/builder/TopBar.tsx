@@ -3,11 +3,18 @@ import { Button } from '@/components/ui/button'
 
 export type Device = 'desktop' | 'mobile'
 
-/** Widths the preview container is pinned to. The storefront reads its own
- *  width through @container, so constraining this box is all it takes. */
+/**
+ * Width the preview container is pinned to.
+ *
+ * Mobile is capped by the space actually available, not a bare 420px: on a
+ * phone the panel is narrower than that, and a fixed width would push the
+ * page into horizontal scrolling. The storefront reads its own width through
+ * @container, so constraining this box is all it takes - the browser viewport
+ * and the preview's available width stay separate things.
+ */
 export const DEVICE_WIDTH: Record<Device, string> = {
   desktop: '100%',
-  mobile: '420px',
+  mobile: 'min(420px, 100%)',
 }
 
 interface DeviceProps {
@@ -20,6 +27,8 @@ interface Props {
   onCompare: () => void
   onCopyLink: () => void
   canCompare: boolean
+  canSave: boolean
+  hasSnapshot: boolean
   copied: 'idle' | 'ok' | 'failed'
   justSaved: boolean
 }
@@ -29,20 +38,35 @@ export function TopBar({
   onCompare,
   onCopyLink,
   canCompare,
+  canSave,
+  hasSnapshot,
   copied,
   justSaved,
 }: Props) {
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-background px-6">
+    <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-background px-4 py-3 sm:px-6 lg:h-16 lg:flex-nowrap lg:py-0">
       <div className="min-w-0">
         <h1 className="truncate leading-tight font-semibold tracking-tight">Theme Builder</h1>
         <p className="truncate text-sm leading-tight text-muted-foreground">Negative Split</p>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={onSave}>
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={onSave}
+          disabled={!canSave}
+          title={
+            !canSave
+              ? 'Close the comparison before saving'
+              : hasSnapshot
+                ? 'Replaces the theme you saved earlier'
+                : undefined
+          }
+        >
           {justSaved && <Check className="size-3.5" aria-hidden />}
-          {justSaved ? 'Saved' : 'Save for comparison'}
+          {justSaved ? 'Saved' : hasSnapshot ? 'Replace saved theme' : 'Save for comparison'}
         </Button>
         <span aria-live="polite" className="sr-only">
           {justSaved ? 'Theme saved for comparison' : ''}

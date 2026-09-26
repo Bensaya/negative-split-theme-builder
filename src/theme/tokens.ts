@@ -36,38 +36,14 @@ const PRIMARY_SHADES = [500, 600, 700, 800] as const
 const ACCENT_SHADES = [500, 600, 400, 700, 300, 800, 200, 900] as const
 
 /**
- * Picks the step of `ramp` that reads best against `surface`.
- *
- * An accent is a UI element (an underline, a badge), not body text, so AA's
- * 3:1 large-text threshold is the right bar. The first candidate that clears
- * it wins; if none does - a mid-grey surface can defeat a whole ramp - we fall
- * back to whichever step has the highest ratio, so the result is always the
- * best available rather than an arbitrary default.
- */
-function pickVisibleOn(surface: string, ramp: RampName): string {
-  const steps = ACCENT_SHADES.map((s) => PALETTE[ramp][s])
-  for (const candidate of steps) {
-    if (contrastRatio(surface, candidate) >= AA_LARGE) return candidate
-  }
-  return steps.reduce((best, c) =>
-    contrastRatio(surface, c) > contrastRatio(surface, best) ? c : best,
-  )
-}
-
-/**
  * Picks the brightest step of the chosen accent ramp whose best foreground
  * still clears WCAG AA.
  *
  * Hardcoding a single shade does not work across all twelve ramps: 500 is the
  * most vivid step and is right for lime or amber, but rose-600 and
  * fuchsia-600 sit at ~4.4:1 against both candidate foregrounds - close enough
- * to look fine and measurably below AA. Fixing that by darkening every ramp
- * would dull the colours that were already fine.
- *
- * So we search instead: take the brightest shade that passes. Vivid ramps keep
- * their vivid step, awkward ramps darken only as far as they must, and the
- * exhaustive test over all 60 base x theme combinations stays green without
- * any per-colour special cases.
+ * to look fine and measurably below AA. Darkening every ramp to fix two would
+ * dull the colours that were already fine, so we search instead.
  */
 function pickPrimary(ramp: RampName, lightest: string, darkest: string): string {
   const steps = PRIMARY_SHADES.map((s) => PALETTE[ramp][s])
@@ -81,6 +57,47 @@ function pickPrimary(ramp: RampName, lightest: string, darkest: string): string 
   // No step clears AA (does not happen with Tailwind's ramps, but the fallback
   // must still be deterministic): use the darkest considered step.
   return steps[steps.length - 1]
+}
+
+/**
+ * Picks the step of `ramp` that works as an accent on `surface`.
+ *
+ * An accent has to satisfy TWO constraints, and satisfying only the first is
+ * the bug this function exists to avoid:
+ *
+ *   1. It must be visible against the surface it sits on. An accent is a UI
+ *      element - an underline, a badge - so AA's 3:1 large-text bar applies.
+ *   2. Text must be readable ON it. The bag count is
+ *      --menu-accent-foreground on --menu-accent, which needs the full 4.5:1.
+ *
+ * Checking only (1) produced fourteen unreadable badge combinations, Neutral +
+ * Indigo + Bold among them: a mid-tone accent can be perfectly visible on a
+ * dark nav while neither white nor near-black reads on top of it.
+ *
+ * Candidates run brightest-first, so vivid steps win when they qualify and we
+ * darken only as far as we must. If nothing satisfies both, the constraint
+ * that protects legibility of text wins.
+ */
+function pickAccentOn(
+  surface: string,
+  ramp: RampName,
+  lightest: string,
+  darkest: string,
+): string {
+  const steps = ACCENT_SHADES.map((s) => PALETTE[ramp][s])
+
+  const readableOn = (candidate: string) =>
+    Math.max(contrastRatio(candidate, lightest), contrastRatio(candidate, darkest)) >= AA_NORMAL
+
+  for (const candidate of steps) {
+    if (contrastRatio(surface, candidate) >= AA_LARGE && readableOn(candidate)) return candidate
+  }
+  // Nothing satisfies both. Prefer a legible badge over a vivid but unreadable
+  // one, then fall back to whatever is most visible on the surface.
+  return (
+    steps.find(readableOn) ??
+    steps.reduce((best, c) => (contrastRatio(surface, c) > contrastRatio(surface, best) ? c : best))
+  )
 }
 
 export type ThemeTokens = Record<string, string>
@@ -108,9 +125,11 @@ export function resolveTokens(theme: Theme): ThemeTokens {
   // but in both cases the step is chosen against the *menu* surface, not the
   // page. Using --primary directly would put a lime underline at 1.96:1 on a
   // white nav: visually present, effectively invisible.
-  const menuAccent = pickVisibleOn(
+  const menuAccent = pickAccentOn(
     menu,
     theme.menuAccent === 'bold' ? theme.themeColor : theme.baseColor,
+    lightest,
+    darkest,
   )
   const menuAccentForeground = pickForeground(menuAccent, lightest, darkest)
 

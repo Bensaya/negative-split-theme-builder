@@ -68,6 +68,9 @@ export function useThemeUrl(fallback: Theme): ThemeUrl {
   const applyTheme = useCallback((next: Theme) => {
     themeRef.current = next
     setTheme(next)
+    // An explicit edit answers whatever the incoming link got wrong, so the
+    // recovery message stops being true the moment the user changes something.
+    setArrival({ status: 'ok' })
     // Preserves pathname, hash and unrelated parameters, and keeps whatever
     // the app had put in history.state.
     window.history.replaceState(
@@ -86,9 +89,13 @@ export function useThemeUrl(fallback: Theme): ThemeUrl {
     const onPopState = () => {
       // Read only. Rewriting here would turn navigation into a write and
       // reintroduce the cycle this design exists to avoid.
-      const next = decode(window.location.search).theme
-      themeRef.current = next
-      setTheme(next)
+      // Adopt the WHOLE outcome, not just the theme: after navigating the
+      // message must describe the URL now in the address bar, not the one the
+      // page happened to open with.
+      const result = decode(window.location.search)
+      themeRef.current = result.theme
+      setTheme(result.theme)
+      setArrival(result.outcome)
     }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)

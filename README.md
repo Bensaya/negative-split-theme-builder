@@ -6,19 +6,23 @@ re-themes live on the right. Every combination is a shareable link.
 
 Built with Vite, React, TypeScript, Tailwind CSS v4 and shadcn/ui. No backend.
 
-> **Status.** Complete. Every configuration control, the shareable URL, Shuffle
-> and Save & Compare are implemented and working. 80 unit tests cover the pure
-> modules; the integration behaviour was verified by driving the real UI, and
-> several of the bugs described below were found that way rather than by test.
+> **Status.** Complete. Every configuration control, the shareable URL,
+> Shuffle and Save & Compare are implemented.
 
 ---
 
 ## Running it locally
 
+Requires **Node 20.19+ or 22.12+** (Vite 8). Built and verified on Node 25.2.
+
 ```bash
 npm install
-npm run dev          # http://localhost:5173
+npm run dev          # http://localhost:5173 - the port is pinned
 ```
+
+The dev server uses `strictPort`, so it fails rather than moving to 5174. The
+Google Fonts API key is restricted by HTTP referrer to `localhost:5173`, and a
+silent port change would make every catalogue request fail.
 
 | Command | What it does |
 | --- | --- |
@@ -292,9 +296,12 @@ a catalogue failure does not stop a font the user already asked for from
 loading, because those are separate operations that fail separately.
 
 **Previews.** Each catalogue entry carries a `menu` URL — a font file holding
-only the glyphs of that family's own name, versioned and immutable
-(`max-age=31536000`), so a family is fetched at most once ever. The picker
-registers it through `FontFace` under an **alias** (`Inter __menu`).
+only the glyphs of that family's own name, versioned and served with
+`cache-control: max-age=31536000`, so repeat views are normally served from the
+browser's HTTP cache. In-process, one entry per family and loading mode is kept
+for the page session; a failed attempt is evicted so selecting that family
+again retries. The picker registers the file through `FontFace` under an
+**alias** (`Inter __menu`).
 
 Choosing the name is what makes the obvious bug impossible. A cache keyed by
 family would conflate *"I loaded the 20-glyph name subset"* with *"I loaded the
@@ -308,6 +315,10 @@ to be mounted. Keyboard movement scrolls the target into view, which keeps it
 mounted — otherwise `aria-activedescendant` points at nothing and a screen
 reader announces nothing.
 
+A font that fails to load leaves the requested family in the theme and in the
+URL: the storefront shows fallback typography, a notice explains what happened,
+and choosing the family again retries.
+
 **Without a key**, a bundled list of 35 curated families is used instead, and
 the picker says so. `.env.local` is gitignored, so this is the path anyone
 cloning the repo will actually hit — not an edge case.
@@ -317,24 +328,34 @@ cloning the repo will actually hit — not an edge case.
 ## Testing
 
 ```bash
-npm test
+npm test          # 96 unit tests
+npm run typecheck
+npm run build
+npm run lint
 ```
 
-Test-first on the modules where correctness is subtle and invisible: the WCAG
-contrast engine, the token resolver, URL encoding and validation, and the font
-catalogue fallback. Presentational components are covered by end-to-end tests of
-the flows that must not break, not by unit tests asserting that a click calls a
-setter.
+**Committed automated coverage** is over the pure modules, where correctness is
+subtle and invisible:
 
-Two real defects were found by tests before any UI existed:
+| Module | What is asserted |
+| --- | --- |
+| `theme/contrast` | oklch to sRGB conversion pinned to reference values; WCAG ratios |
+| `theme/tokens` | readable text across all 60 base x theme pairs and all 240 badge combinations |
+| `theme/shuffle` | draws only from the option lists; never pairs a font with itself |
+| `url/urlCodec` | round trips, per-field fallback, malformed input never throws |
+| `fonts/catalog` | no key, 403, network error, malformed entries, caching |
+| `fonts/preview` | cache identity across the bundled-to-API handoff |
+| `fonts/loadRecovery` | pending vs loaded vs failed, retry after failure, dedupe |
 
-- An exhaustive check across all 60 base × theme combinations found `rose-600`
-  and `fuchsia-600` at ~4.4:1 — below AA, and close enough that nobody would
-  have caught it by eye.
-- Setting the menu accent to the theme colour put a lime underline on a white
-  nav at **1.96:1**.
+**There are no committed browser or end-to-end tests.** Layout, keyboard
+behaviour and the Save & Compare journeys were verified by driving the running
+app manually and asserting against the live DOM. That is a real gap: those
+checks are reproducible by hand but are not re-run by CI.
 
-Both are described in [`DECISIONS.md`](./DECISIONS.md).
+Several defects were found this way rather than by test, including a
+virtualised list that rendered zero rows because the scroll container was
+measured before it existed, and `aria-activedescendant` referencing an
+unmounted option after a manual scroll.
 
 ---
 
