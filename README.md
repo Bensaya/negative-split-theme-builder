@@ -189,9 +189,8 @@ Two defects worth naming, both found by tests before any UI existed:
 
 ### How I used AI
 
-I built this with an AI coding assistant, delegating scaffolding, most of the
+I built this with Claude Code, delegating scaffolding, most of the
 implementation, and the repetitive parts of verification.
-[CONFIRM: name the assistant — the repository does not record which tool was used.]
 
 I owned the decisions, and `DECISIONS.md` records each one with the alternative
 rejected: readable URL parameters over an encoded blob, a single typed theme
@@ -199,10 +198,8 @@ object, tokens scoped to a wrapper rather than `:root`, and Save & Compare as
 the custom feature. Two of those entries are reversals I argued myself out of.
 
 The commit bodies say how each defect surfaced — some from the test suite, some
-only from driving the running app. Those browser checks were manual and are not
-committed as tests.
-[CONFIRM: they were driven with Playwright through an external tool; Playwright
-is not a dependency of this repository.]
+only from driving the running app. Those browser checks were driven with
+Playwright MCP and are not committed as tests.
 
 ## Credits
 
