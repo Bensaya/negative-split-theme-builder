@@ -210,7 +210,7 @@ export default function App() {
             */}
             <div
               style={{ ...previewTokens, width: DEVICE_WIDTH[device] }}
-              className="mx-auto max-w-[1440px] overflow-hidden rounded-lg border border-border shadow-sm transition-[width] duration-200"
+              className="mx-auto max-w-[1600px] overflow-hidden rounded-lg border border-border shadow-sm transition-[width] duration-200"
             >
               <Storefront />
             </div>

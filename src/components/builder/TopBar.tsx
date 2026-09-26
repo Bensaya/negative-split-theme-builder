@@ -31,7 +31,11 @@ export function TopBar({
   justSaved,
 }: Props) {
   return (
-    <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-background px-4 py-3 sm:px-6 lg:h-16 lg:flex-nowrap lg:py-0">
+    // The bar spans the window, but its CONTENT is capped and centred. On an
+    // ultrawide display a full-width bar strands the title and the actions
+    // three thousand pixels apart, which reads as broken rather than roomy.
+    <header className="flex shrink-0 items-center justify-center border-b border-border bg-background px-4 py-3 sm:px-6 lg:h-16 lg:py-0">
+      <div className="flex w-full max-w-[1760px] flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:flex-nowrap">
       <div className="min-w-0">
         <h1 className="truncate leading-tight font-semibold tracking-tight">Theme Builder</h1>
         <p className="truncate text-sm leading-tight text-muted-foreground">Negative Split</p>
@@ -74,6 +78,7 @@ export function TopBar({
           {copied === 'ok' ? 'Link copied to clipboard' : ''}
           {copied === 'failed' ? 'Could not copy the link' : ''}
         </span>
+      </div>
       </div>
     </header>
   )
