@@ -16,7 +16,7 @@ Built with Vite, React, TypeScript, Tailwind CSS v4 and shadcn/ui. No backend.
 Requires **Node 20.19+ or 22.12+** (Vite 8). Built and verified on Node 25.2.
 
 ```bash
-npm install
+npm ci
 npm run dev          # http://localhost:5173 - the port is pinned
 ```
 
@@ -309,7 +309,9 @@ only the glyphs of that family's own name, versioned and served with
 browser's HTTP cache. In-process, one entry per family and loading mode is kept
 for the page session; a failed attempt is evicted so selecting that family
 again retries. The picker registers the file through `FontFace` under an
-**alias** (`Inter __menu`).
+**alias** (`Inter __menu`). Bundled entries without a menu file use the shared
+full-font loader. This prevents a failed preview stylesheet from leaving an
+errored face under the storefront family name after a retry.
 
 Choosing the name is what makes the obvious bug impossible. A cache keyed by
 family would conflate *"I loaded the 20-glyph name subset"* with *"I loaded the
@@ -329,7 +331,9 @@ Choosing that same family again triggers an explicit retry: re-picking the
 already-selected font changes no theme value, so the loader is asked directly
 rather than the theme or the URL being nudged to force a re-run. The retry
 starts a genuinely new request, shares an attempt already in flight, and clears
-the error once the face actually loads.
+the error once the face actually loads. The picker shows **Loading…** while
+that attempt is pending. Retrying one family does not invalidate pending
+completion reports for the other families.
 
 **Without a key**, a bundled list of 35 curated families is used instead, and
 the picker says so. `.env.local` is gitignored, so this is the path anyone
@@ -340,14 +344,13 @@ cloning the repo will actually hit — not an edge case.
 ## Testing
 
 ```bash
-npm test          # 96 unit tests
+npm test          # 106 unit and hook integration tests
 npm run typecheck
 npm run build
 npm run lint
 ```
 
-**Committed automated coverage** is over the pure modules, where correctness is
-subtle and invisible:
+**Committed automated coverage** covers pure modules and the font-loading hook:
 
 | Module | What is asserted |
 | --- | --- |
@@ -358,11 +361,15 @@ subtle and invisible:
 | `fonts/catalog` | no key, 403, network error, malformed entries, caching |
 | `fonts/preview` | cache identity across the bundled-to-API handoff |
 | `fonts/loadRecovery` | pending vs loaded vs failed, retry after failure, dedupe |
+| `fonts/useGoogleFont` | same-family retry, pending until font completion, independent concurrent families, shared bundled-preview recovery |
 
 **There are no committed browser or end-to-end tests.** Layout, keyboard
-behaviour and the Save & Compare journeys were verified by driving the running
-app manually and asserting against the live DOM. That is a real gap: those
-checks are reproducible by hand but are not re-run by CI.
+behaviour, font retry, URL restoration and the Save & Compare journeys were
+verified against the running app with one-off Playwright scripts and live DOM
+assertions. Those browser checks are not re-run by CI. Visual review of the
+captured screenshots was separate from those automated browser assertions.
+See [the final verification report](artifacts/polish/REPORT.md) for the executed
+scenarios and screenshots.
 
 Several defects were found this way rather than by test, including a
 virtualised list that rendered zero rows because the scroll container was

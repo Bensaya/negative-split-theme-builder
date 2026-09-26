@@ -153,3 +153,29 @@
     @apply font-sans;
     }
 }
+/* Bounded media keeps a wide preview useful without making the store taller. */
+.storefront .hero-image {
+    height: clamp(220px, 27cqw, 320px);
+    object-position: 56% 55%;
+}
+.storefront .featured-image {
+    height: clamp(230px, 27cqw, 320px);
+    background: #f8f8f8;
+}
+.storefront .product-image {
+    max-height: 250px;
+    background: #fff;
+}
+.storefront button,
+.storefront a {
+    transition: background-color 150ms, opacity 150ms, box-shadow 150ms;
+}
+.storefront button:hover { box-shadow: inset 0 0 0 100px rgb(0 0 0 / 6%); }
+.storefront a:hover { text-decoration-thickness: 2px; }
+.storefront :is(button, a):focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+}

@@ -1,6 +1,7 @@
 import { Check, Dices, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FontPicker } from './FontPicker'
+import type { FontStatus } from '@/fonts/useGoogleFont'
 import type { FontFamily } from '@/fonts/catalog'
 import { PALETTE } from '@/theme/palette'
 import {
@@ -40,6 +41,7 @@ interface Props {
   families: FontFamily[]
   /** Set when the catalogue could not be fetched; the bundled list is in use. */
   catalogError?: string
+  fontStatus: Record<string, FontStatus>
   /** Comparison is read-only, so the whole panel is disabled while it is open. */
   disabled?: boolean
 }
@@ -149,7 +151,7 @@ function Segmented<T extends string>({
             />
             <span
               data-selected={selected}
-              className="block rounded-sm px-2 py-1.5 text-center text-sm transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-foreground data-[selected=false]:hover:bg-background/70 data-[selected=true]:bg-foreground data-[selected=true]:font-medium data-[selected=true]:text-background"
+              className="block rounded-sm px-1 py-2 text-center text-xs transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-foreground data-[selected=false]:hover:bg-background/70 data-[selected=true]:bg-foreground data-[selected=true]:font-medium data-[selected=true]:text-background"
             >
               {labels?.[option] ?? titleCase(option)}
             </span>
@@ -167,6 +169,7 @@ export function Sidebar({
   onReset,
   families,
   catalogError,
+  fontStatus,
   disabled,
 }: Props) {
   const isDefault = JSON.stringify(theme) === JSON.stringify(DEFAULT_THEME)
@@ -176,8 +179,8 @@ export function Sidebar({
     // window is shorter than the controls. Without min-h-0 a flex child
     // refuses to shrink below its content and the last controls become
     // unreachable on a 700px-tall laptop.
-    <div className="flex min-h-0 flex-col gap-6 overflow-y-auto p-6">
-      <div>
+    <div className="flex min-h-0 flex-col gap-5 p-5">
+      <div className="hidden lg:block">
         <h2 className="text-lg font-semibold tracking-tight">Customize</h2>
         <p className="text-sm text-muted-foreground">Make it yours.</p>
       </div>
@@ -207,6 +210,7 @@ export function Sidebar({
       <Group label="Heading font">
         <FontPicker
           label="Heading font"
+          loading={fontStatus[theme.headingFont] === 'pending'}
           value={theme.headingFont}
           families={families}
           onSelect={(v) => onChange('headingFont', v)}
@@ -217,6 +221,7 @@ export function Sidebar({
       <Group label="Body font">
         <FontPicker
           label="Body font"
+          loading={fontStatus[theme.bodyFont] === 'pending'}
           value={theme.bodyFont}
           families={families}
           onSelect={(v) => onChange('bodyFont', v)}

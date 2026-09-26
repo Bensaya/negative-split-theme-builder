@@ -15,25 +15,17 @@ import { FEATURED, NAV_LINKS, PRODUCTS, type Product } from '@/data/products'
 
 function Spec({ product }: { product: Product }) {
   return (
-    <dl className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm tabular-nums text-muted-foreground">
-      <div className="flex gap-1.5">
-        <dt className="sr-only">Heel-to-toe drop</dt>
-        <dd>{product.drop} mm drop</dd>
-      </div>
-      <span aria-hidden className="opacity-40">
-        /
-      </span>
-      <div className="flex gap-1.5">
-        <dt className="sr-only">Stack height</dt>
-        <dd>{product.stack} mm stack</dd>
-      </div>
-      <span aria-hidden className="opacity-40">
-        /
-      </span>
-      <div className="flex gap-1.5">
-        <dt className="sr-only">Weight</dt>
-        <dd>{product.weight} oz</dd>
-      </div>
+    <dl className="grid grid-cols-3 gap-3 border-y border-border py-3 text-sm tabular-nums">
+      {[
+        ['Drop', `${product.drop} mm`],
+        ['Stack', `${product.stack} mm`],
+        ['Weight', `${product.weight} oz`],
+      ].map(([label, value]) => (
+        <div key={label}>
+          <dt className="text-xs text-muted-foreground">{label}</dt>
+          <dd className="mt-1 font-medium">{value}</dd>
+        </div>
+      ))}
     </dl>
   )
 }
@@ -41,7 +33,7 @@ function Spec({ product }: { product: Product }) {
 function Header() {
   return (
     <header
-      className="flex flex-wrap items-center gap-x-8 gap-y-3 px-6 py-4"
+      className="flex flex-wrap items-center gap-x-8 gap-y-3 px-6 py-4 @3xl:px-8"
       style={{ background: 'var(--menu)', color: 'var(--menu-foreground)' }}
     >
       <span className="font-heading text-lg font-bold tracking-tight uppercase whitespace-nowrap">
@@ -95,9 +87,12 @@ function Header() {
 
 function Hero() {
   return (
-    <section className="grid items-center gap-8 px-6 py-12 @3xl:grid-cols-[1.05fr_1fr] @3xl:py-16">
+    <section className="store-hero grid items-center gap-7 px-6 py-8 @3xl:grid-cols-[1fr_1.05fr] @3xl:gap-10 @3xl:px-8 @3xl:py-10">
       <div>
-        <h1 className="font-heading text-4xl leading-[1.05] font-bold tracking-tight text-balance @3xl:text-5xl">
+        <p className="mb-4 text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+          For the miles ahead
+        </p>
+        <h1 className="font-heading max-w-[14ch] text-4xl leading-[1.04] font-bold tracking-[-0.04em] text-balance @3xl:text-5xl">
           Find your next favorite run.
         </h1>
         <p className="mt-4 max-w-[38ch] text-muted-foreground">
@@ -120,7 +115,7 @@ function Hero() {
       <img
         src="/products/hero.webp"
         alt="A runner on an empty road at sunrise"
-        className="aspect-[16/10] w-full max-w-full rounded-lg object-cover"
+        className="hero-image w-full rounded-lg object-cover"
         loading="eager"
       />
     </section>
@@ -129,15 +124,15 @@ function Hero() {
 
 function Featured() {
   return (
-    <section className="px-6 pb-12">
-      <div className="grid items-center gap-8 rounded-xl bg-muted p-6 @3xl:grid-cols-[1.1fr_1fr] @3xl:p-10">
+    <section className="px-6 pb-10 @3xl:px-8">
+      <div className="featured-product grid items-center gap-6 overflow-hidden rounded-xl border border-border bg-card @3xl:grid-cols-[1.1fr_1fr]">
         <img
           src={FEATURED.image}
           alt={FEATURED.alt}
-          className="aspect-[4/3] w-full max-w-full rounded-lg object-cover"
+          className="featured-image w-full object-contain"
           loading="lazy"
         />
-        <div>
+        <div className="px-6 pb-6 @3xl:py-6 @3xl:pr-8 @3xl:pl-0">
           <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
             This week&rsquo;s pick
           </p>
@@ -164,7 +159,7 @@ function Featured() {
 
 function Grid() {
   return (
-    <section id="grid" className="px-6 pb-14">
+    <section id="grid" className="px-6 pb-10 @3xl:px-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-heading text-2xl font-bold tracking-tight">Find your pace</h2>
@@ -178,21 +173,21 @@ function Grid() {
         </a>
       </div>
 
-      <ul className="grid grid-cols-1 gap-5 @lg:grid-cols-2 @4xl:grid-cols-4">
+      <ul className="grid grid-cols-1 gap-x-5 gap-y-8 @sm:grid-cols-2 @5xl:grid-cols-4">
         {PRODUCTS.map((p) => (
           <li key={p.id} className="flex flex-col">
             <img
               src={p.image}
               alt={p.alt}
-              className="aspect-[4/3] w-full max-w-full rounded-lg border border-border object-cover"
+              className="product-image aspect-[4/3] w-full rounded-lg border border-border object-contain"
               loading="lazy"
             />
             <h3 className="font-heading mt-3 text-base font-semibold">{p.name}</h3>
             <p className="text-sm text-muted-foreground">{p.category}</p>
             <p className="mt-2 text-sm tabular-nums text-muted-foreground">
-              {p.drop} mm / {p.stack} mm / {p.weight} oz
+              {p.drop} mm drop · {p.weight} oz
             </p>
-            <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+            <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
               <span className="font-heading font-bold tabular-nums">&euro;{p.price}</span>
               <button
                 type="button"
@@ -213,7 +208,7 @@ export function Storefront() {
   return (
     // bg-background / text-foreground / font-sans must be re-applied here:
     // shadcn puts them on <body>, which resolves outside this subtree.
-    <div className="@container min-h-full bg-background font-sans text-foreground">
+    <div className="storefront @container min-h-full bg-background font-sans text-foreground">
       <Header />
       <Hero />
       <Featured />

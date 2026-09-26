@@ -26,3 +26,6 @@ dist-ssr
 # local env
 .env.local
 .env
+
+# local review output (screenshots, reports) - not product code
+artifacts/

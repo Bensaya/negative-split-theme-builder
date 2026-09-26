@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flush, renderHook } from '@/test/renderHook'
 import { __resetFontCache, useGoogleFonts } from './useGoogleFont'
+import { __resetPreviewCache, ensurePreviewFont } from './preview'
 
 /**
  * The retry path, exercised through the hook rather than through ensureFont.
@@ -30,6 +31,7 @@ function installLinkDriver() {
 
 beforeEach(() => {
   __resetFontCache()
+  __resetPreviewCache()
   document.head.innerHTML = ''
   attempts = 0
   outcome = 'load'
@@ -123,6 +125,40 @@ describe('useGoogleFonts', () => {
     const hook = await renderHook(() => useGoogleFonts('One', 'Two'))
     await hook.act(flush)
     expect(hook.current().status).toMatchObject({ One: 'loaded', Two: 'loaded' })
+    hook.unmount()
+  })
+
+  it('retrying one family does not discard another pending family', async () => {
+    let finishOther!: (faces: FontFace[]) => void
+    vi.mocked(document.fonts.load).mockImplementation((font) => {
+      if (font.includes('Other')) return new Promise((resolve) => { finishOther = resolve }) as Promise<FontFace[]>
+      return Promise.resolve([])
+    })
+    const hook = await renderHook(() => useGoogleFonts('Retry', 'Other'))
+    await hook.act(flush)
+    expect(hook.current().status.Retry).toBe('failed')
+    await hook.act(async () => { hook.current().retry('Retry'); await flush() })
+    await hook.act(async () => { finishOther([{} as FontFace]); await flush() })
+    expect(hook.current().status.Other).toBe('loaded')
+    hook.unmount()
+  })
+
+  it('shares a failed bundled preview with the hook and recovers after reselection', async () => {
+    vi.mocked(document.fonts.load).mockResolvedValue([])
+    await ensurePreviewFont({ family: 'Shared', category: 'serif' })
+    const hook = await renderHook(() => useGoogleFonts('Shared'))
+    await hook.act(flush)
+    expect(hook.current().status.Shared).toBe('failed')
+    // There must not be a second preview stylesheet keeping an errored face
+    // under the same real family name after the storefront retries.
+    expect(document.querySelectorAll('link')).toHaveLength(1)
+    let finish!: (faces: FontFace[]) => void
+    vi.mocked(document.fonts.load).mockImplementation(() => new Promise((resolve) => { finish = resolve }))
+    await hook.act(async () => { hook.current().retry('Shared'); await flush() })
+    expect(hook.current().status.Shared).toBe('pending')
+    await hook.act(async () => { finish([{} as FontFace]); await flush() })
+    expect(hook.current().status.Shared).toBe('loaded')
+    expect(document.querySelectorAll('link')).toHaveLength(1)
     hook.unmount()
   })
 

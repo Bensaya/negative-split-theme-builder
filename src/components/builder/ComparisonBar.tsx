@@ -47,9 +47,7 @@ export function ComparisonBar({
       </fieldset>
 
       <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-        {view === 'saved'
-          ? 'Showing the theme you saved. Your current edits are untouched.'
-          : 'Showing your current theme.'}{' '}
+        Showing your {view} theme. Current edits are untouched.{' '}
         <span className="whitespace-nowrap">The snapshot is cleared on refresh.</span>
       </p>
 

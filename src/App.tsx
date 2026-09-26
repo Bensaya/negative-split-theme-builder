@@ -169,7 +169,7 @@ export default function App() {
             id="settings-panel"
             className={cn(
               'min-h-0 overflow-y-auto',
-              panelOpen ? 'max-h-[60vh]' : 'hidden',
+              panelOpen ? 'max-h-[42dvh]' : 'hidden',
               'lg:block lg:max-h-none lg:flex-1',
             )}
           >
@@ -179,6 +179,7 @@ export default function App() {
               onShuffle={shuffle}
               onReset={() => applyTheme(DEFAULT_THEME)}
               families={catalog.families}
+              fontStatus={fontStatus}
               catalogError={catalog.loading ? undefined : catalog.error}
               disabled={comparing}
             />
@@ -209,7 +210,7 @@ export default function App() {
             */}
             <div
               style={{ ...previewTokens, width: DEVICE_WIDTH[device] }}
-              className="mx-auto max-w-full overflow-hidden rounded-lg border border-border shadow-sm transition-[width] duration-200"
+              className="mx-auto max-w-[1440px] overflow-hidden rounded-lg border border-border shadow-sm transition-[width] duration-200"
             >
               <Storefront />
             </div>

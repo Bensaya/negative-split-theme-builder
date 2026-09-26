@@ -153,6 +153,7 @@ export function useGoogleFonts(...families: (string | undefined)[]): GoogleFonts
   useEffect(() => {
     const current = ++generation.current
     for (const family of wanted) track(family, current)
+    return () => { generation.current = current + 1 }
   }, [wanted, track])
 
   const retry = useCallback(
@@ -168,7 +169,7 @@ export function useGoogleFonts(...families: (string | undefined)[]): GoogleFonts
         delete next[family]
         return next
       })
-      track(family, ++generation.current)
+      track(family, generation.current)
     },
     [track],
   )

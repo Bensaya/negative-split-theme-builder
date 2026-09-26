@@ -39,9 +39,10 @@ interface Props {
   families: FontFamily[]
   onSelect: (family: string) => void
   disabled?: boolean
+  loading?: boolean
 }
 
-export function FontPicker({ label, value, families, onSelect, disabled }: Props) {
+export function FontPicker({ label, value, families, onSelect, disabled, loading }: Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
@@ -158,7 +159,12 @@ export function FontPicker({ label, value, families, onSelect, disabled }: Props
       ...document.querySelectorAll<HTMLElement>(
         'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
       ),
-    ].filter((el) => el.offsetParent !== null || el === trigger)
+    ].filter(
+      (el) =>
+        (el.offsetParent !== null || el === trigger) &&
+        el.tabIndex >= 0 &&
+        !(el instanceof HTMLInputElement && el.type === 'radio' && !el.checked),
+    )
     const index = focusable.indexOf(trigger)
     if (index === -1) return
     const next = focusable[direction === 'forward' ? index + 1 : index - 1]
@@ -167,6 +173,7 @@ export function FontPicker({ label, value, families, onSelect, disabled }: Props
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Tab') {
+      event.preventDefault()
       // Close and let focus continue past the picker rather than being pulled
       // back to the trigger.
       closeReason.current = event.shiftKey ? 'shift-tab' : 'tab'
@@ -210,12 +217,18 @@ export function FontPicker({ label, value, families, onSelect, disabled }: Props
         ref={triggerRef}
         disabled={disabled}
         aria-label={label}
+        aria-busy={loading}
         aria-haspopup="listbox"
         aria-expanded={open}
         className="flex w-full items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
         <span className="text-muted-foreground">Aa</span>
         <span className="flex-1 truncate text-left">{value}</span>
+        {loading && (
+          <span role="status" className="text-xs text-muted-foreground">
+            Loading…
+          </span>
+        )}
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       </PopoverTrigger>
 

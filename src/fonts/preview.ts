@@ -1,4 +1,5 @@
 import type { FontFamily } from './catalog'
+import { ensureFont } from './useGoogleFont'
 
 /**
  * Loads the face used to render ONE ROW of the font picker.
@@ -21,7 +22,8 @@ import type { FontFamily } from './catalog'
  *   - A bundled family (the no-key path) has no menu URL and loads the FULL
  *     font through CSS2 under its real name. That is correct rather than
  *     merely safe: a full font under its real name is what the storefront
- *     wants too.
+ *     wants too. Both callers share the full-font loader so a failed preview
+ *     stylesheet cannot leave a second, broken face registered under that name.
  *
  * This matters during the catalogue handoff. The picker opens with bundled
  * families, the API answers a moment later, and the same family arrives again
@@ -64,44 +66,6 @@ export function previewStatus(font: FontFamily): LoadStatus | undefined {
   return entries.get(previewKey(font))?.status
 }
 
-function loadViaCss2(family: string): Promise<LoadStatus> {
-  const id = `preview-css2-${family}`
-  const existing = document.getElementById(id)
-  if (existing) existing.remove() // a previous attempt failed; let this one retry
-
-  const link = document.createElement('link')
-  link.id = id
-  link.rel = 'stylesheet'
-  link.href =
-    'https://fonts.googleapis.com/css2?family=' +
-    encodeURIComponent(family).replace(/%20/g, '+') +
-    '&display=swap'
-  document.head.appendChild(link)
-
-  return new Promise<LoadStatus>((resolve) => {
-    link.addEventListener(
-      'load',
-      () => {
-        // A stylesheet that loads does not prove the font file loaded. Ask the
-        // font loading API to actually fetch the face before claiming success.
-        document.fonts
-          .load(`16px "${family.replace(/["\\]/g, '')}"`)
-          .then((faces) => resolve(faces.length > 0 ? 'loaded' : 'failed'))
-          .catch(() => resolve('failed'))
-      },
-      { once: true },
-    )
-    link.addEventListener(
-      'error',
-      () => {
-        link.remove()
-        resolve('failed')
-      },
-      { once: true },
-    )
-  })
-}
-
 /**
  * Ensures the preview face for `font` is available.
  *
@@ -119,7 +83,7 @@ export function ensurePreviewFont(font: FontFamily): Promise<LoadStatus> {
 
   const promise = (async (): Promise<LoadStatus> => {
     try {
-      if (!font.menuUrl) return await loadViaCss2(font.family)
+      if (!font.menuUrl) return await ensureFont(font.family)
 
       const face = new FontFace(previewAlias(font.family), `url(${font.menuUrl})`, {
         display: 'swap',

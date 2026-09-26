@@ -47,7 +47,7 @@ export const PRODUCTS: Product[] = [
     stack: 18,
     weight: 5.2,
     price: 230,
-    image: '/products/mile-1.webp',
+    image: '/products/mile-1.jpg',
     alt: 'Mile 1 racing spike in white, side profile',
   },
   {
@@ -59,7 +59,7 @@ export const PRODUCTS: Product[] = [
     stack: 15,
     weight: 4.6,
     price: 180,
-    image: '/products/split-3.webp',
+    image: '/products/split-3.jpg',
     alt: 'Split 3 racing spike in neon green, side profile',
   },
   {
@@ -71,7 +71,7 @@ export const PRODUCTS: Product[] = [
     stack: 17,
     weight: 5.0,
     price: 175,
-    image: '/products/kick-r.webp',
+    image: '/products/kick-r.jpg',
     alt: 'Kick R racing spike in red, side profile',
   },
   {
@@ -83,7 +83,7 @@ export const PRODUCTS: Product[] = [
     stack: 16,
     weight: 4.9,
     price: 160,
-    image: '/products/lane-8.webp',
+    image: '/products/lane-8.jpg',
     alt: 'Lane 8 cross country spike in pale blue, side profile',
   },
 ]

@@ -3,16 +3,18 @@
 All product and lifestyle photography in this project is used under a free
 licence. Files are committed to the repository rather than hotlinked, so the
 app is self-contained, works offline, and cannot break when a remote URL
-changes. Originals were downloaded from Wikimedia Commons and resized to web
-dimensions; no other alteration was made.
+changes. Originals were downloaded from Wikimedia Commons. The four grid photographs
+are proportionally resized to 1,200 px wide, preserving the complete source
+framing, and encoded as JPEG. The hero and featured photograph retain their
+existing WebP exports.
 
 | File | Used for | Photographer | Licence | Source |
 | --- | --- | --- | --- | --- |
 | `hero.webp` | Hero banner | Tikkho Maciel tikkho | CC0 | [Commons](https://commons.wikimedia.org/wiki/File:Man_running_down_side_of_road_(Unsplash).jpg) |
-| `kick-r.webp` | Product grid | Bifty | CC BY 4.0 | [Commons](https://commons.wikimedia.org/wiki/File:Saysh-track-spike-red.png) |
-| `lane-8.webp` | Product grid | Bifty | CC BY 4.0 | [Commons](https://commons.wikimedia.org/wiki/File:Saysh-track-spike.jpg) |
-| `mile-1.webp` | Product grid | Bifty | CC BY 4.0 | [Commons](https://commons.wikimedia.org/wiki/File:Saysh-track-spike-white.jpg) |
-| `split-3.webp` | Product grid | Bifty | CC BY 4.0 | [Commons](https://commons.wikimedia.org/wiki/File:Saysh-track-spike-neon.png) |
+| `kick-r.jpg` | Product grid | Bifty | CC BY 4.0 | [Commons](https://commons.wikimedia.org/wiki/File:Saysh-track-spike-red.png) |
+| `lane-8.jpg` | Product grid | Bifty | CC BY 4.0 | [Commons](https://commons.wikimedia.org/wiki/File:Saysh-track-spike.jpg) |
+| `mile-1.jpg` | Product grid | Bifty | CC BY 4.0 | [Commons](https://commons.wikimedia.org/wiki/File:Saysh-track-spike-white.jpg) |
+| `split-3.jpg` | Product grid | Bifty | CC BY 4.0 | [Commons](https://commons.wikimedia.org/wiki/File:Saysh-track-spike-neon.png) |
 | `velo-4.webp` | Featured product | Imani Bahati https://www.imani-bht.com/ | CC0 | [Commons](https://commons.wikimedia.org/wiki/File:Imani-bahati-unpaired-gray-nike-running-shoe.jpg) |
 
 ## Licence notes
