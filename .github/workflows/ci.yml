@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Lint, build and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 22.12 is the floor Vite 8 needs; the README states the same.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      # `build` runs `tsc -b` first, so this covers typechecking too.
+      - run: npm run build
+
+      - run: npm test
+
+      # No VITE_GOOGLE_FONTS_API_KEY is provided here, deliberately. CI
+      # therefore exercises the path a reviewer without a key actually hits:
+      # the catalogue request fails and the bundled 35 families are used. A
+      # suite that only passed with a key would not be testing that path.

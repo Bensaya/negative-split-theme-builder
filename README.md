@@ -6,6 +6,8 @@ re-themes live on the right. Every combination is a shareable link.
 
 Vite, React, TypeScript, Tailwind CSS v4 and shadcn/ui. No backend.
 
+[![CI](https://github.com/Bensaya/negative-split-theme-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/Bensaya/negative-split-theme-builder/actions/workflows/ci.yml)
+
 **Live demo:** https://negative-split-theme-builder.vercel.app/
 
 ## Running it
