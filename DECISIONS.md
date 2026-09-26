@@ -227,7 +227,7 @@ intended.
 
 ---
 
-## The shareable URL — **Designed, not yet built**
+## The shareable URL
 
 ### 12. React owns the state; the URL is a projection of it
 
@@ -283,6 +283,22 @@ the other six settings they were sent.
 
 ---
 
+### 14a. A missing version means version 1
+
+**What.** No `v` parameter is treated as version 1. Only an explicitly
+different version (`v=2`) is rejected.
+
+**Why.** Hand-edited and trimmed links are a normal way to arrive, and
+discarding a perfectly readable theme because someone dropped `v=1` would be
+hostile. This also resolves a contradiction in the first draft of this
+document, which showed an unversioned URL working in one place and being
+discarded in another.
+
+**Rejected.** A separate legacy decoder. Nothing has ever shipped, so there are
+no legacy links — it would be a code path with no users.
+
+---
+
 ### 15. Font names are validated separately from everything else
 
 **What.** `decode()` is pure and synchronous: it validates the fixed
@@ -302,20 +318,52 @@ it silently destroys the font in a shared link whenever the network is slow.
 
 ---
 
-### 16. `replaceState` while editing, `pushState` on discrete jumps
+### 16. One history verb, written immediately
 
-**What.** Dragging through swatches rewrites the current history entry.
-Shuffle, and restoring a saved theme, push a new one.
+**What.** Every theme change writes the URL immediately with `replaceState`.
+No debounce, no `pushState`.
 
-**Why.** Editing should not fill the history stack with forty near-identical
-entries. But Shuffle is a discrete jump a user will want to undo, and Back is
-the control they will reach for. Without this, Back exits the app entirely.
+**Why no debounce.** All seven controls are discrete selections. There is no
+slider for a debounce to coalesce, so it would buy nothing and cost delayed
+URLs, stale writes and cancellation logic. An earlier draft specified 250 ms;
+it was solving a problem this UI does not have.
 
-**Also.** Pending debounced writes are cancelled on navigation, and the "Copy
-link" button builds its URL from the current React state rather than reading
-`location.search`, so it can never hand out a stale link mid-debounce.
+**Why no `pushState`.** An earlier draft pushed on Shuffle so Back would undo
+it. Reversed: browser-history undo needs its own design for how pushes interact
+with later edits and Forward, and Save & Compare already provides an explicit
+save-and-restore that does the job more visibly. An app that never pushes is at
+least predictable.
+
+**Rejected.** Push-on-Shuffle. It is a nice touch and it is a second,
+half-specified undo mechanism competing with the one we actually built.
 
 ---
+
+### 16a. Nothing is rewritten on load
+
+**What.** The incoming URL is never corrected. A link stays as sent until the
+first edit.
+
+**Why.** The whole benefit of a readable format is that a broken link can be
+read. Silently rewriting the address bar destroys the evidence in exactly the
+case someone is debugging. An unsupported version shows a notice and leaves the
+link alone.
+
+---
+
+### 16b. Edits compose from a ref, not from state
+
+**What.** `updateTheme(derive)` reads the current theme from a ref and hands
+`applyTheme` a finished value.
+
+**Why.** Composing from a closed-over `theme` meant two edits in the same tick
+both built on the same stale snapshot and the second discarded the first —
+five rapid swatch clicks kept only the last. Found by driving the real UI, not
+by a unit test.
+
+**Rejected.** A functional state updater, which would fix staleness but put the
+URL write and Shuffle's `Math.random()` inside an updater React invokes twice
+under StrictMode.
 
 ## Fonts — **Designed, not yet built**
 

@@ -1,4 +1,4 @@
-import { Link2, Monitor, Smartphone } from 'lucide-react'
+import { Check, Link2, Monitor, Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export type Device = 'desktop' | 'mobile'
@@ -20,9 +20,10 @@ interface Props {
   onCompare: () => void
   onCopyLink: () => void
   canCompare: boolean
+  copied: 'idle' | 'ok' | 'failed'
 }
 
-export function TopBar({ onSave, onCompare, onCopyLink, canCompare }: Props) {
+export function TopBar({ onSave, onCompare, onCopyLink, canCompare, copied }: Props) {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-background px-6">
       <div className="min-w-0">
@@ -38,9 +39,18 @@ export function TopBar({ onSave, onCompare, onCopyLink, canCompare }: Props) {
           Compare
         </Button>
         <Button size="sm" className="gap-2" onClick={onCopyLink}>
-          <Link2 className="size-4" aria-hidden />
-          Copy link
+          {copied === 'ok' ? (
+            <Check className="size-4" aria-hidden />
+          ) : (
+            <Link2 className="size-4" aria-hidden />
+          )}
+          {copied === 'ok' ? 'Copied' : copied === 'failed' ? 'Copy failed' : 'Copy link'}
         </Button>
+        {/* Announced separately so the label change is not the only signal. */}
+        <span aria-live="polite" className="sr-only">
+          {copied === 'ok' ? 'Link copied to clipboard' : ''}
+          {copied === 'failed' ? 'Could not copy the link' : ''}
+        </span>
       </div>
     </header>
   )

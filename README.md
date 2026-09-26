@@ -69,7 +69,7 @@ Readable, one parameter per control, with a schema version at the front.
 **React owns the theme. The URL is a projection of it.**
 
 One `Theme` object lives in React state and is the single source of truth. When
-it changes, a debounced effect writes the URL. The URL is *read* in exactly two
+it changes, the URL is written immediately. The URL is *read* in exactly two
 situations: on mount, and on `popstate`.
 
 The reason this is safe — and the detail that makes the whole design work — is
@@ -77,7 +77,7 @@ that **`pushState` and `replaceState` do not fire `popstate`.** Writing to the
 URL therefore cannot trigger a read, so the data flow has no cycle:
 
 ```
-user input  ──►  React state  ──►  URL        (write, debounced)
+user input  ──►  React state  ──►  URL        (write, immediate)
 browser nav ──►  URL          ──►  React state (read, on popstate only)
 ```
 
@@ -115,7 +115,7 @@ independently against its own `as const` list, and **an invalid value falls back
 to that one field's default without affecting the others.**
 
 ```
-?base=chartreuse&theme=rose   →   base falls back to neutral, theme=rose is kept
+?v=1&base=chartreuse&theme=rose   →   base falls back to neutral, theme=rose is kept
 ```
 
 All-or-nothing validation was rejected for the obvious reason: one bad character
@@ -129,8 +129,9 @@ should not cost the user the other six settings they were sent.
 | Missing parameter | That field defaults |
 | Duplicated parameter | First occurrence wins |
 | Unencoded space in a font name | Accepted; `+` and `%20` both parse |
-| `v` missing or unrecognised | Whole theme falls back to default |
-| Absurdly long value | Rejected by length cap, field defaults |
+| `v` missing | Treated as version 1 — a trimmed or hand-edited link still works |
+| `v` present but unsupported (`v=2`) | Whole theme defaults, a notice explains why, **and the URL is left untouched** |
+| Font name over 64 chars, or containing control characters or `<` | That field defaults |
 
 ### The subtle one: fonts cannot be validated at parse time
 
@@ -152,21 +153,43 @@ They render immediately via the CSS fallback stack, and membership in the
 catalogue is resolved separately once a catalogue exists. A requested font is
 never overwritten with a default while the catalogue is loading or unavailable.
 
-### History: editing versus jumping
+### History: one verb, immediate
 
-Dragging through swatches uses `replaceState`, so forty small edits do not
-produce forty history entries. Shuffle and "Use saved theme" use `pushState`,
-because those are discrete jumps a user will want to undo — and **Back is the
-control they will reach for.** Without this distinction, pressing Back after a
-Shuffle leaves the app entirely.
+Every theme change — including Shuffle and restoring a saved theme — writes
+immediately with `replaceState`.
+
+**No debounce.** All seven controls are discrete selections: swatches, segmented
+toggles, dropdowns. There is no slider, so there is nothing for a debounce to
+coalesce, and adding one would only introduce delayed URLs, stale writes and
+timer coordination for no benefit. An earlier draft specified 250 ms; that was
+solving a problem this UI does not have.
+
+**No `pushState`.** Browser-history undo is deliberately out of scope. An
+earlier draft pushed a history entry on Shuffle so Back would undo it, but that
+needs its own design for how pushes interact with subsequent edits and
+Forward — and Save & Compare already provides an explicit, visible
+save-and-restore that does the same job better. An app that never pushes
+behaves predictably: Back leaves, as it would from any single-page tool.
 
 Two consequences worth stating:
 
-- Pending debounced writes are cancelled on navigation, so an in-flight write
-  cannot land after the user has already navigated away from that state.
-- **"Copy link" builds its URL from current React state**, never by reading
-  `location.search`. Reading the address bar mid-debounce would hand someone a
-  link to the theme as it was 300 ms ago.
+- **Nothing is rewritten on load.** A link someone sent stays exactly as sent
+  until the first edit. A malformed or unsupported link therefore stays
+  inspectable instead of being quietly corrected out of existence.
+- **"Copy link" builds from current state**, never by reading
+  `location.search`. It reads through a ref rather than React state, so a link
+  copied immediately after an edit carries that edit.
+
+### One bug this caught
+
+Composing each edit from a closed-over `theme` meant two edits dispatched in
+the same tick both built on the same stale snapshot, and the second silently
+discarded the first. Five rapid swatch clicks kept only the last one.
+
+The fix is a ref holding the latest theme, with edits composed from the ref. It
+cannot be fixed with a functional state updater, because the URL write and
+`Math.random()` in Shuffle must stay *outside* updaters — React invokes those
+twice under StrictMode.
 
 ### What this does not do
 
