@@ -1,387 +1,212 @@
 # Negative Split — Shop Theme Builder
 
-A theme builder for an e-commerce storefront: pick a base colour, an accent, two
-fonts, a corner radius and a menu treatment on the left, and a running-shoe shop
+A theme builder for an e-commerce storefront. Pick a base colour, an accent, two
+fonts, a corner radius and a menu treatment on the left; a running shop
 re-themes live on the right. Every combination is a shareable link.
 
-Built with Vite, React, TypeScript, Tailwind CSS v4 and shadcn/ui. No backend.
+Vite, React, TypeScript, Tailwind CSS v4 and shadcn/ui. No backend.
 
-> **Status.** Complete. Every configuration control, the shareable URL,
-> Shuffle and Save & Compare are implemented.
-
----
-
-## Running it locally
-
-Requires **Node 20.19+ or 22.12+** (Vite 8). Built and verified on Node 25.2.
+## Running it
 
 ```bash
-npm ci
-npm run dev          # http://localhost:5173 - the port is pinned
+npm install
+npm run dev          # http://localhost:5173
 ```
 
-The dev server uses `strictPort`, so it fails rather than moving to 5174. The
-Google Fonts API key is restricted by HTTP referrer to `localhost:5173`, and a
-silent port change would make every catalogue request fail.
+Requires **Node 20.19+ or 22.12+** (Vite 8).
 
-| Command | What it does |
+| Command | |
 | --- | --- |
-| `npm run dev` | Dev server |
+| `npm run dev` | Dev server, on port 5173 exactly |
 | `npm run build` | Typecheck and production build |
-| `npm test` | Unit tests (Vitest) |
-| `npm run test:watch` | Unit tests in watch mode |
-| `npm run typecheck` | TypeScript only |
+| `npm test` | Unit and hook tests |
+| `npm run lint` | oxlint |
 
-### Google Fonts API key — optional
+The port is pinned with `strictPort`, because the Google Fonts API key is
+restricted by HTTP referrer to `localhost:5173` and a silent move to 5174 would
+make every catalogue request fail.
 
-The font pickers use the Google Fonts Developer API to list the full catalogue.
-**The app works without a key** — it falls back to a bundled list of popular
-families, but with one you get all 1,955 families.
+### Google Fonts key — optional
+
+**The app works without one.** It falls back to 35 curated families and says so
+in the panel. With a key you get the full catalogue, about 1,950 families.
 
 ```bash
-cp .env.example .env.local
-# then edit .env.local:
-VITE_GOOGLE_FONTS_API_KEY=your_key_here
+cp .env.example .env.local     # then add your key
 ```
 
-A key is free from the [Google Cloud Console](https://console.cloud.google.com/):
-create a project, enable **Web Fonts Developer API**, create an API key. No
-billing account required.
+Free from the [Google Cloud Console](https://console.cloud.google.com/): new
+project, enable **Web Fonts Developer API**, create an API key. No billing
+account needed.
 
-Note that a `VITE_`-prefixed variable is compiled into the browser bundle and is
-therefore **public**. That is acceptable for this API — it is a read-only public
-catalogue, and the key can be restricted by HTTP referrer, but it is not a
-secret and is not treated as one here.
+A `VITE_`-prefixed variable is compiled into the bundle and is therefore
+**public**. That is acceptable here — it is a read-only public catalogue and the
+key can be referrer-restricted — but it is not a secret and is not treated as
+one.
 
----
+## How it works
+
+Three ideas carry most of the design. [`DECISIONS.md`](./DECISIONS.md) has the
+rest, with the alternative each one beat.
+
+**One typed theme object.** Every setting is a field on `Theme`, and the option
+lists are `as const` with the types derived from them. Adding a swatch widens
+the type, the URL validator, the Shuffle space and the sidebar together.
+
+**The theme reaches the preview through CSS variables on a wrapper, never
+`:root`.** shadcn declares its tokens inside Tailwind's `@theme inline`, so
+`bg-primary` compiles to `background-color: var(--primary)` — a single-level
+`var()` resolved on the element carrying the class. Ordinary inheritance does
+the propagation, which means there is no "apply the theme" code at all, and the
+builder's own chrome stays on the default theme no matter what you pick. It is
+also why two themes can coexist on one page, which is what Save & Compare uses.
+
+**React owns the theme; the URL is a projection of it.** Every edit goes through
+one `applyTheme()`, which is the only writer of the URL.
 
 ## The shareable URL
-
-### What it looks like
 
 ```
 /?v=1&base=slate&theme=rose&radius=large&menu=inverted&accent=bold
  &heading=Playfair%20Display&body=Inter
 ```
 
-Readable, one parameter per control, with a schema version at the front.
+Readable parameters rather than an encoded blob: you can see what a link does
+and hand-edit one field to test a case. It is also **shorter** — base64 of the
+equivalent JSON measures 135 characters against 101, because base64 inflates by
+a third.
 
-### Who owns the state
+**Writes are immediate `replaceState`.** No debounce: all seven controls are
+discrete selections, so there is nothing to coalesce and a debounce would only
+add stale writes. No `pushState` either, so theme edits create no history
+entries — what Back does is whatever else is on the stack, and in-page anchors
+can still add entries.
 
-**React owns the theme. The URL is a projection of it.**
+The flow is acyclic, and that is only possible because **`pushState` and
+`replaceState` do not fire `popstate`**: a write can never trigger a read, so no
+guard flags are needed.
 
-One `Theme` object lives in React state and is the single source of truth. When
-it changes, the URL is written immediately. The URL is *read* in exactly two
-situations: on mount, and on `popstate`.
+### Validation
 
-The reason this is safe — and the detail that makes the whole design work — is
-that **`pushState` and `replaceState` do not fire `popstate`.** Writing to the
-URL therefore cannot trigger a read, so the data flow has no cycle:
-
-```
-user input  ──►  React state  ──►  URL        (write, immediate)
-browser nav ──►  URL          ──►  React state (read, on popstate only)
-```
-
-Two other approaches were considered:
-
-**The URL as the source of truth.** Every control writes to the URL and state is
-derived from `location.search` on each render. The shareable link then comes for
-free. Rejected because every slider nudge becomes a history operation, parsing
-runs on every render, and every component ends up coupled to the serialization
-format, which also makes the format much harder to change later.
-
-**Two-way sync**, where state watches the URL and the URL watches the state.
-This is the trap. State writes the URL, the URL write triggers a read, the read
-sets state, and you start adding guard flags to break cycles you created
-yourself. It is a familiar bug and worth designing out rather than debugging.
-
-### Readable parameters, not an encoded blob
-
-The alternative was base64 of a JSON object: shorter, tidier, and completely
-opaque. Readable parameters were chosen because a reviewer can understand the
-link at a glance and can hand-edit one value to test a specific case, which
-matters for an exercise that is partly *about* the URL. The blob would also
-still need a version marker, so it saves less than it first appears.
-
-The tradeoff accepted: longer URLs, and the parameter names become a public
-contract that older links depend on. The `v=1` parameter is how that contract
-is allowed to change. an unrecognised version falls back to the default theme
-rather than guessing at a format it does not understand.
-
-### Validation: per-field, and it never throws
-
-A shared link is untrusted input. It may have been truncated by a chat client,
-hand-edited, or produced by an older build. So each parameter is validated
-independently against its own `as const` list, and **an invalid value falls back
-to that one field's default without affecting the others.**
-
-```
-?v=1&base=chartreuse&theme=rose   →   base falls back to neutral, theme=rose is kept
-```
-
-All-or-nothing validation was rejected for the obvious reason: one bad character
-should not cost the user the other six settings they were sent.
+Each parameter is validated on its own. An invalid value defaults **that field
+alone**, because one bad character should not cost the other six settings.
 
 | Case | Behaviour |
 | --- | --- |
 | No query string | Default theme |
-| Unknown parameter name | Ignored |
 | Unknown value (`base=chartreuse`) | That field defaults, others kept |
-| Missing parameter | That field defaults |
-| Duplicated parameter | First occurrence wins |
-| Unencoded space in a font name | Accepted; `+` and `%20` both parse |
-| `v` missing | Treated as version 1. a trimmed or hand-edited link still works |
-| `v` present but unsupported (`v=2`) | Whole theme defaults, a notice explains why, **and the URL is left untouched** |
-| Font name over 64 chars, or containing control characters or `<` | That field defaults |
+| Unknown parameter | Ignored |
+| Duplicated parameter | First wins |
+| `v` missing or empty | Treated as version 1 |
+| `v` present but unsupported | Whole theme defaults, notice shown, **URL left untouched** |
+| Font name over 64 chars, or containing control characters | That field defaults |
 
-### The subtle one: fonts cannot be validated at parse time
+Nothing is rewritten on load. A malformed link stays inspectable, which is the
+whole point of a readable format.
 
-This is the part that would have shipped as a bug.
+### Fonts are the interesting case
 
-`decode()` is pure and synchronous. It can check that `radius=large` is a real
-radius, because that list is a compile-time constant. It **cannot** check that
-`heading=Playfair Display` is a real Google Font, because the catalogue is
-fetched over the network and may not have arrived — or may never arrive, if
-there is no API key.
+`decode()` is synchronous, but the font catalogue is a network call. So font
+names travel through decoding as **opaque strings** and are matched only once
+there is a catalogue: case-insensitively, corrected to the catalogue's spelling
+(`heading=inter` becomes `Inter`), and defaulted with a notice if unknown.
 
-Validating fonts eagerly would mean that opening a shared link replaces the
-sender's font with the default during the moments before the API responds, and
-permanently if the API is unavailable. The link would appear to work and would
-quietly be wrong.
-
-So font names are carried through decoding as **opaque unresolved strings**.
-They render immediately via the CSS fallback stack, and membership in the
-catalogue is resolved separately once a catalogue exists. A requested font is
-never overwritten with a default while the catalogue is loading or unavailable.
-
-### History: one verb, immediate
-
-Every theme change, including Shuffle and restoring a saved theme, writes
-immediately with `replaceState`.
-
-**No debounce.** All seven controls are discrete selections: swatches, segmented
-toggles, dropdowns. There is no slider, so there is nothing for a debounce to
-coalesce, and adding one would only introduce delayed URLs, stale writes and
-timer coordination for no benefit. An earlier draft specified 250 ms; that was
-solving a problem this UI does not have.
-
-**No `pushState`.** Browser-history undo is deliberately out of scope. An
-earlier draft pushed a history entry on Shuffle so Back would undo it, but that
-needs its own design for how pushes interact with subsequent edits and Forward,
-and Save & Compare already provides an explicit, visible save-and-restore that
-does the same job better.
-
-The accurate guarantee is narrow: **theme edits create no history entries.**
-What Back then does is whatever the rest of the session put on the stack. In-page
-anchors such as `#grid` in the storefront still create entries, so Back may well
-move within the page before it leaves it. Anything stronger would be a claim
-about history this app does not control.
-
-Two consequences worth stating:
-
-- **Nothing is rewritten on load.** A link someone sent stays exactly as sent
-  until the first edit. A malformed or unsupported link therefore stays
-  inspectable instead of being quietly corrected out of existence.
-- **"Copy link" builds from current state**, never by reading
-  `location.search`. It reads through a ref rather than React state, so a link
-  copied immediately after an edit carries that edit.
-
-### One bug this caught
-
-Composing each edit from a closed-over `theme` meant two edits dispatched in
-the same tick both built on the same stale snapshot, and the second silently
-discarded the first. Five rapid swatch clicks kept only the last one.
-
-The fix is a ref holding the latest theme, with edits composed from the ref. It
-cannot be fixed with a functional state updater, because the URL write and
-`Math.random()` in Shuffle must stay *outside* updaters — React invokes those
-twice under StrictMode.
-
-### What this does not do
-
-There is no server, so there is no short link. A theme with two long font names
-produces a URL around 150 characters — fine for a chat message, awkward on a
-printed page. With a backend the obvious next step is to POST the theme and
-return an id, keeping the readable URL as a fallback for anyone who wants to
-inspect or edit it by hand.
-
----
-
-## The custom feature: Save & Compare
-
-### What it is
-
-A **Save for comparison** button takes a snapshot of the current theme. You keep
-editing. **Compare** then opens a read-only view with a Saved / Current toggle
-that swaps the same storefront, at the same size and scroll position, between
-the two themes. **Use saved theme** restores the snapshot into the editor;
-closing the comparison without restoring leaves your current edits untouched.
-
-### The problem it solves
-
-The builder creates a specific frustration. You try combinations, land on
-something you like, carry on exploring to see if it gets better — and then
-cannot tell whether it did. The previous version is gone, and reconstructing it
-means remembering five or six settings exactly.
-
-The practical effect is that people stop exploring. Once a theme is "good
-enough", changing it feels like it costs something. A tool whose entire purpose
-is to help someone choose confidently should not make experimentation feel
-risky, and comparison is the thing that makes it safe.
-
-It is also the honest way to answer the question users actually have, which is
-not "what does this theme look like" but "**is this one better than that one?**"
-That is a comparative judgement, and a single live preview cannot support it —
-you end up flicking settings back and forth from memory.
-
-### Why this feature and not a bigger one
-
-It reuses machinery the project already needs rather than adding a subsystem:
-
-- A snapshot is a `Theme`, so it serializes through the **same `encode()`** as
-  the shareable URL.
-- The comparison view renders the **same storefront component** with a different
-  token set, which is only possible because theming is scoped to a wrapper
-  element rather than `:root`. Two themes can therefore exist on one page at the
-  same time.
-
-Adding a feature without adding a subsystem is a better argument than bolting on
-something larger, and it puts the architecture to a second use that demonstrates
-the first was sound.
-
-### Implementation notes
-
-- **One snapshot, in memory.** Held in React state for the page session. Saving
-  again explicitly replaces it.
-- **The snapshot captures the whole `Theme`** — both fonts, base and accent
-  colour, radius, and both menu settings. Because it is the same typed object,
-  a field added later is captured automatically.
-- **Comparison is read-only and non-destructive.** Toggling between Saved and
-  Current does not touch the editable theme or the URL. Only "Use saved theme"
-  writes, and it goes through the normal state flow, so the sidebar controls,
-  the preview and the URL all update together through one code path.
-- **Compare is disabled until a snapshot exists**, rather than opening an empty
-  view and explaining why it is empty.
-- **The URL always represents the editable theme**, never the snapshot. There is
-  one meaning for the address bar and it does not change depending on which view
-  is open.
-- **The saved theme's fonts start loading when the snapshot is taken**, which
-  usually means the saved view renders in its real typefaces immediately.
-  Starting a request is not finishing one: a slow or failed face shows fallback
-  typography there as it would anywhere else. Preloading reduces the chance of
-  a flash rather than removing it.
-
-### The tradeoff, taken deliberately
-
-**One slot, in memory, lost on reload.**
-
-The obvious "more complete" version is multiple named snapshots in
-`localStorage`. That brings a list UI, naming, deletion, storage-quota handling,
-and a migration story for when the theme shape changes — a meaningful amount of
-surface area for a feature whose real question is simply *"was the last one
-better?"* One slot answers that question directly.
-
-Persistence is also already solved by a better mechanism: the shareable URL is
-the durable way to keep a theme, and it works across devices and people, which
-`localStorage` does not. Save & Compare is deliberately the *ephemeral* tool —
-scratch space for the ten seconds when you are deciding — and the URL is the
-permanent one.
-
----
+The check is against the catalogue, **never the browser**. Asking whether the
+browser can render a name would accept `Helvetica Neue` on a machine that has it
+installed, so the link would look right to the sender and wrong to everyone
+else.
 
 ## Fonts
 
-Two Google APIs are involved and they have opposite requirements:
+Two Google APIs, with opposite requirements:
 
 | | Needs a key | Returns |
 | --- | --- | --- |
-| Web Fonts **Developer API** | yes | the catalogue — 1,955 families |
-| **CSS2 API** | no | the actual font files |
+| Web Fonts **Developer API** | yes | the catalogue |
+| **CSS2 API** | no | the font files |
 
-So the key gates the *list*, never the rendering. That distinction matters:
-a catalogue failure does not stop a font the user already asked for from
-loading, because those are separate operations that fail separately.
+The key gates the *list*, never the rendering — so a catalogue failure does not
+stop a font you already asked for from loading.
 
-**Previews.** Each catalogue entry carries a `menu` URL — a font file holding
-only the glyphs of that family's own name, versioned and served with
-`cache-control: max-age=31536000`, so repeat views are normally served from the
-browser's HTTP cache. In-process, one entry per family and loading mode is kept
-for the page session; a failed attempt is evicted so selecting that family
-again retries. The picker registers the file through `FontFace` under an
-**alias** (`Inter __menu`). Bundled entries without a menu file use the shared
-full-font loader. This prevents a failed preview stylesheet from leaving an
-errored face under the storefront family name after a retry.
+**Previews** use each family's `menu` file, which contains only the glyphs of
+that family's own name, registered through `new FontFace(alias, …)`. Choosing
+the face name is what makes the obvious bug impossible: a cache keyed by family
+alone would report a hit for a previewed font and leave the storefront rendering
+with only the letters of that font's name.
 
-Choosing the name is what makes the obvious bug impossible. A cache keyed by
-family would conflate *"I loaded the 20-glyph name subset"* with *"I loaded the
-full font"* — select a previewed font and the storefront would render with only
-the letters of that font's name available. Separate namespaces mean the
-collision cannot happen, rather than merely not happening.
+**Virtualised** — about 13 of ~1,950 rows are in the DOM at a time. Search
+filters the whole catalogue *before* windowing, or it would only ever find what
+happened to be mounted. Keyboard movement scrolls its target into view, so
+`aria-activedescendant` never points at an unmounted row.
 
-**Virtualisation.** ~13 of 1,955 rows are in the DOM at a time. Search filters
-the whole catalogue *before* windowing, or it would only ever find what happened
-to be mounted. Keyboard movement scrolls the target into view, which keeps it
-mounted — otherwise `aria-activedescendant` points at nothing and a screen
-reader announces nothing.
+**When a font fails**, the requested family stays in the theme and the URL. The
+storefront shows fallback type, a notice explains, and re-picking that same
+family triggers an explicit retry.
 
-**When a font fails**, the requested family stays in the theme and in the URL.
-The storefront shows fallback typography and a notice explains what happened.
-Choosing that same family again triggers an explicit retry: re-picking the
-already-selected font changes no theme value, so the loader is asked directly
-rather than the theme or the URL being nudged to force a re-run. The retry
-starts a genuinely new request, shares an attempt already in flight, and clears
-the error once the face actually loads. The picker shows **Loading…** while
-that attempt is pending. Retrying one family does not invalidate pending
-completion reports for the other families.
+## Feature: Save & Compare
 
-**Without a key**, a bundled list of 35 curated families is used instead, and
-the picker says so. `.env.local` is gitignored, so this is the path anyone
-cloning the repo will actually hit — not an edge case.
+**What it is.** Save a snapshot of the current theme, keep editing, then open a
+read-only Saved/Current toggle that swaps the same storefront between the two.
+**Why it is useful.** The builder makes exploration feel risky: once you like
+something, changing it costs you the thing you liked, so people stop exploring.
+**Implementation.** A snapshot is just a `Theme`, so it serialises through the
+same `encode()` as the shareable URL, and the comparison renders the same
+storefront with a second token set — possible only because theming is scoped to
+a wrapper rather than `:root`.
 
----
+One snapshot, in memory, lost on refresh. Multiple named snapshots in
+`localStorage` would bring a list UI, deletion, quota handling and migration,
+for a feature whose real question is "was the last one better?" — and the
+shareable URL is already the durable mechanism.
+
+Restoring goes through the same `applyTheme()` funnel as every other edit, so
+the controls, the preview and the URL move together. Switching between Saved and
+Current changes neither the editable theme nor the URL, and Compare stays
+disabled until a snapshot exists.
 
 ## Testing
 
 ```bash
-npm test          # 106 unit and hook integration tests
-npm run typecheck
-npm run build
-npm run lint
+npm test
 ```
 
-**Committed automated coverage** covers pure modules and the font-loading hook:
-
-| Module | What is asserted |
-| --- | --- |
-| `theme/contrast` | oklch to sRGB conversion pinned to reference values; WCAG ratios |
-| `theme/tokens` | readable text across all 60 base x theme pairs and all 240 badge combinations |
-| `theme/shuffle` | draws only from the option lists; never pairs a font with itself |
-| `url/urlCodec` | round trips, per-field fallback, malformed input never throws |
-| `fonts/catalog` | no key, 403, network error, malformed entries, caching |
-| `fonts/preview` | cache identity across the bundled-to-API handoff |
-| `fonts/loadRecovery` | pending vs loaded vs failed, retry after failure, dedupe |
-| `fonts/useGoogleFont` | same-family retry, pending until font completion, independent concurrent families, shared bundled-preview recovery |
+Committed tests cover the pure modules, where correctness is subtle and
+invisible: the WCAG contrast engine, token resolution, URL coding and
+validation, catalogue fallback, preview-cache identity, and font-load recovery.
 
 **There are no committed browser or end-to-end tests.** Layout, keyboard
-behaviour, font retry, URL restoration and the Save & Compare journeys were
-verified against the running app with one-off Playwright scripts and live DOM
-assertions. Those browser checks are not re-run by CI. Visual review of the
-captured screenshots was separate from those automated browser assertions.
-See [the final verification report](artifacts/polish/REPORT.md) for the executed
-scenarios and screenshots.
+behaviour and the Save & Compare journeys were verified by driving the running
+app and asserting against the live DOM. That is a real gap — those checks are
+reproducible by hand but are not re-run by CI.
 
-Several defects were found this way rather than by test, including a
-virtualised list that rendered zero rows because the scroll container was
-measured before it existed, and `aria-activedescendant` referencing an
-unmounted option after a manual scroll.
+Two defects worth naming, both found by tests before any UI existed:
 
----
+- An exhaustive check across all 60 base × theme combinations caught `rose-600`
+  and `fuchsia-600` at ~4.4:1 — below AA, and close enough that nobody would
+  have seen it by eye.
+- Checking only whether the menu accent was *visible* left the bag count
+  unreadable in 14 of 240 combinations.
+
+### How I used AI
+
+I built this with an AI coding assistant, delegating scaffolding, most of the
+implementation, and the repetitive parts of verification.
+[CONFIRM: name the assistant — the repository does not record which tool was used.]
+
+I owned the decisions, and `DECISIONS.md` records each one with the alternative
+rejected: readable URL parameters over an encoded blob, a single typed theme
+object, tokens scoped to a wrapper rather than `:root`, and Save & Compare as
+the custom feature. Two of those entries are reversals I argued myself out of.
+
+The commit bodies say how each defect surfaced — some from the test suite, some
+only from driving the running app. Those browser checks were manual and are not
+committed as tests.
+[CONFIRM: they were driven with Playwright through an external tool; Playwright
+is not a dependency of this repository.]
 
 ## Credits
 
-Product photography: see `public/products/CREDITS.md`.
+Product photography: see [`public/products/CREDITS.md`](./public/products/CREDITS.md).
 
 Palette values are generated from the installed `tailwindcss` package by
-`scripts/generate-palette.mjs` — they are Tailwind's own values, not
-transcribed.
+`scripts/generate-palette.mjs` — Tailwind's own values, not transcribed.
