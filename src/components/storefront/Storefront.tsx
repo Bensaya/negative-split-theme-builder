@@ -1,4 +1,7 @@
-import { ArrowRight, Search, ShoppingBag } from 'lucide-react'
+import { Search, ShoppingBag } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { FEATURED, NAV_LINKS, PRODUCTS, type Product } from '@/data/products'
 
 /**
@@ -70,15 +73,15 @@ function Header() {
         <span className="flex items-center gap-2">
           <ShoppingBag className="size-4" aria-hidden />
           Bag
-          <span
-            className="rounded-sm px-1.5 text-xs font-semibold tabular-nums"
+          <Badge
+            className="tabular-nums"
             style={{
               background: 'var(--menu-accent)',
               color: 'var(--menu-accent-foreground)',
             }}
           >
             2
-          </span>
+          </Badge>
         </span>
       </div>
     </header>
@@ -92,23 +95,17 @@ function Hero() {
         <p className="mb-4 text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
           For the miles ahead
         </p>
-        <h1 className="font-heading max-w-[14ch] text-4xl leading-[1.04] font-bold tracking-[-0.04em] text-balance @3xl:text-5xl">
+        <h1 className="font-heading max-w-[14ch] text-4xl leading-[1.04] font-bold tracking-[-0.02em] text-balance @3xl:text-5xl">
           Find your next favorite run.
         </h1>
         <p className="mt-4 max-w-[38ch] text-muted-foreground">
           Good shoes. Great miles. Find the pair that fits your run.
         </p>
-        <div className="mt-7 flex flex-wrap items-center gap-5">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 font-heading text-sm font-semibold text-primary-foreground"
-          >
-            Shop running shoes
-            <ArrowRight className="size-4" aria-hidden />
-          </button>
-          <a href="#grid" className="text-sm underline underline-offset-4">
-            Explore the collection
-          </a>
+        <div className="mt-7 flex flex-wrap items-center gap-4">
+          <Button size="lg">Shop running shoes</Button>
+          <Button variant="link" asChild>
+            <a href="#grid">Explore the collection</a>
+          </Button>
         </div>
       </div>
 
@@ -141,16 +138,10 @@ function Featured() {
           <div className="mt-4">
             <Spec product={FEATURED} />
           </div>
-          <p className="font-heading mt-5 text-2xl font-bold tabular-nums">
-            &euro;{FEATURED.price}
-          </p>
-          <button
-            type="button"
-            className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 font-heading text-sm font-semibold text-primary-foreground"
-          >
+          <p className="mt-5 text-2xl font-bold tabular-nums">&euro;{FEATURED.price}</p>
+          <Button size="lg" className="mt-4">
             Shop {FEATURED.name}
-            <ArrowRight className="size-4" aria-hidden />
-          </button>
+          </Button>
         </div>
       </div>
     </section>
@@ -167,10 +158,9 @@ function Grid() {
             Four spikes, one last. Sized for racing, not for training.
           </p>
         </div>
-        <a href="#" className="flex items-center gap-1.5 text-sm underline underline-offset-4">
-          View all
-          <ArrowRight className="size-3.5" aria-hidden />
-        </a>
+        <Button variant="link" asChild className="px-0">
+          <a href="#">View all</a>
+        </Button>
       </div>
 
       <ul className="grid grid-cols-1 gap-x-5 gap-y-8 @sm:grid-cols-2 @5xl:grid-cols-4">
@@ -188,7 +178,7 @@ function Grid() {
               {p.drop} mm drop · {p.weight} oz
             </p>
             <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
-              <span className="font-heading font-bold tabular-nums">&euro;{p.price}</span>
+              <span className="font-bold tabular-nums">&euro;{p.price}</span>
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent"
@@ -204,6 +194,61 @@ function Grid() {
   )
 }
 
+
+function Footer() {
+  const columns = [
+    { title: 'Shop', links: ['Racing', 'Track', 'Road', 'Sale'] },
+    { title: 'Fitting', links: ['Gait check', 'Size guide', 'Book a fitting'] },
+    { title: 'Help', links: ['Delivery', 'Returns', 'Contact'] },
+  ]
+  return (
+    <footer className="border-t border-border px-6 py-10 @3xl:px-8">
+      <div className="grid gap-8 @3xl:grid-cols-[1.2fr_repeat(3,auto)]">
+        <div className="max-w-[34ch]">
+          <p className="font-heading text-base font-semibold">Race-week email</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            One note a week: what landed, what is worth your money, and what is not.
+          </p>
+          <form
+            className="mt-4 flex flex-wrap gap-2"
+            onSubmit={(event) => event.preventDefault()}
+          >
+            <label htmlFor="newsletter-email" className="sr-only">
+              Email address
+            </label>
+            <Input
+              id="newsletter-email"
+              type="email"
+              placeholder="you@example.com"
+              className="min-w-0 flex-1"
+            />
+            <Button type="submit">Sign up</Button>
+          </form>
+        </div>
+
+        {columns.map((column) => (
+          <nav key={column.title} aria-label={column.title}>
+            <p className="font-heading text-sm font-semibold">{column.title}</p>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              {column.links.map((link) => (
+                <li key={link}>
+                  <a href="#" className="hover:text-foreground hover:underline underline-offset-4">
+                    {link}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))}
+      </div>
+
+      <p className="mt-10 border-t border-border pt-6 text-xs text-muted-foreground">
+        Negative Split, Haifa. Returns accepted within 50 km of running.
+      </p>
+    </footer>
+  )
+}
+
 export function Storefront() {
   return (
     // bg-background / text-foreground / font-sans must be re-applied here:
@@ -213,6 +258,7 @@ export function Storefront() {
       <Hero />
       <Featured />
       <Grid />
+      <Footer />
     </div>
   )
 }

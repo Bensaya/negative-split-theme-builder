@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { ComparisonBar, type ComparisonView } from '@/components/builder/ComparisonBar'
 import { Notice } from '@/components/builder/Notice'
@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/builder/Sidebar'
 import { DEVICE_WIDTH, DeviceToggle, TopBar, type Device } from '@/components/builder/TopBar'
 import { Storefront } from '@/components/storefront/Storefront'
 import { useFontCatalog } from '@/fonts/useFontCatalog'
+import { resolveFamily } from '@/fonts/resolveFamily'
 import { useGoogleFonts } from '@/fonts/useGoogleFont'
 import { shuffleTheme } from '@/theme/shuffle'
 import { DEFAULT_THEME, type Theme } from '@/theme/theme'
@@ -34,6 +35,9 @@ export default function App() {
   const [device, setDevice] = useState<Device>('desktop')
   const [copied, setCopied] = useState<'idle' | 'ok' | 'failed'>('idle')
   const catalog = useFontCatalog()
+  // Fonts that a link asked for but the catalogue does not have.
+  const [unresolvedFonts, setUnresolvedFonts] = useState<string[]>([])
+  const resolvedAgainst = useRef<readonly unknown[] | null>(null)
 
   // Save & Compare. Exactly one snapshot, held in memory for the page session.
   // The URL always represents the editable theme and never the snapshot, so
@@ -57,6 +61,45 @@ export default function App() {
   const failedFonts = [theme.headingFont, theme.bodyFont].filter(
     (f, i, arr) => fontStatus[f] === 'failed' && arr.indexOf(f) === i,
   )
+
+  /**
+   * Once the catalogue is available, check the fonts the theme is carrying.
+   *
+   * decode() cannot do this: it is synchronous and the catalogue arrives over
+   * the network. So a link's font names travel as opaque strings and are only
+   * judged here, where there is something real to judge them against. A name
+   * that differs only in case is corrected to the catalogue's spelling; a name
+   * the catalogue does not have falls back and is reported.
+   */
+  useEffect(() => {
+    if (catalog.loading) return
+    if (resolvedAgainst.current === catalog.families) return
+    resolvedAgainst.current = catalog.families
+
+    const current = getTheme()
+    const heading = resolveFamily(current.headingFont, catalog.families, DEFAULT_THEME.headingFont)
+    const body = resolveFamily(current.bodyFont, catalog.families, DEFAULT_THEME.bodyFont)
+
+    const missing = [
+      !heading.matched ? 'heading' : null,
+      !body.matched ? 'body' : null,
+    ].filter((f): f is string => f !== null)
+    setUnresolvedFonts(missing)
+
+    if (heading.family !== current.headingFont || body.family !== current.bodyFont) {
+      applyTheme({ ...current, headingFont: heading.family, bodyFont: body.family })
+    }
+  }, [catalog.loading, catalog.families, getTheme, applyTheme])
+
+  // Escape leaves the comparison, matching every other dismissible surface.
+  useEffect(() => {
+    if (!comparing) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setComparing(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [comparing])
 
   // Composes against the latest theme, not the one captured when this
   // callback was created - otherwise two edits in the same tick lose the first.
@@ -117,8 +160,11 @@ export default function App() {
   // Comparison swaps the token set on the SAME element rather than rendering a
   // second storefront. Identical dimensions and a preserved scroll position
   // come for free, because nothing unmounts.
-  const previewTokens =
-    comparing && view === 'saved' && savedTokens ? savedTokens : currentTokens
+  const showingSaved = comparing && view === 'saved' && saved !== null
+  const previewTokens = showingSaved && savedTokens ? savedTokens : currentTokens
+  // The controls describe whatever is on screen, so the panel and the preview
+  // never disagree about which theme you are looking at.
+  const displayedTheme = showingSaved && saved ? saved : theme
 
   return (
     // overflow-hidden, not overflow-x-hidden. Setting only one axis to hidden
@@ -141,7 +187,12 @@ export default function App() {
         justSaved={justSaved}
       />
 
-      <Notice outcome={arrival} onDismiss={dismissArrival} failedFonts={failedFonts} />
+      <Notice
+        outcome={arrival}
+        onDismiss={dismissArrival}
+        failedFonts={failedFonts}
+        unresolvedFonts={unresolvedFonts}
+      />
 
       {/* Below lg the panel and the preview stack into one column; from lg
           they become two independently scrolling columns. */}
@@ -174,7 +225,7 @@ export default function App() {
             )}
           >
             <Sidebar
-              theme={theme}
+              theme={displayedTheme}
               onChange={update}
               onShuffle={shuffle}
               onReset={() => applyTheme(DEFAULT_THEME)}

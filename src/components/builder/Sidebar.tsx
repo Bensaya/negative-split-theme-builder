@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { FontPicker } from './FontPicker'
 import type { FontStatus } from '@/fonts/useGoogleFont'
 import type { FontFamily } from '@/fonts/catalog'
+import { pickForeground } from '@/theme/contrast'
 import { PALETTE } from '@/theme/palette'
 import {
   BASE_COLORS,
@@ -81,6 +82,7 @@ function Swatches<T extends string>({
     <div className="flex flex-wrap gap-x-3 gap-y-3">
       {options.map((option) => {
         const selected = option === value
+        const swatch = PALETTE[option as keyof typeof PALETTE][shade]
         return (
           <label
             key={option}
@@ -99,10 +101,17 @@ function Swatches<T extends string>({
             <span
               data-selected={selected}
               className="flex size-8 items-center justify-center rounded-full ring-offset-2 ring-offset-background data-[selected=true]:ring-2 data-[selected=true]:ring-ring peer-focus-visible:ring-2 peer-focus-visible:ring-foreground"
-              style={{ background: PALETTE[option as keyof typeof PALETTE][shade] }}
+              style={{ background: swatch }}
             >
               {selected && (
-                <Check className="size-4 text-white drop-shadow-sm" strokeWidth={3} aria-hidden />
+                // White vanishes on a pale swatch like amber-400, so the tick
+                // takes whichever of black or white actually reads on it.
+                <Check
+                  className="size-4"
+                  style={{ color: pickForeground(swatch, 'oklch(100% 0 none)', 'oklch(14.5% 0 none)') }}
+                  strokeWidth={3}
+                  aria-hidden
+                />
               )}
             </span>
             <span className="w-full truncate text-center text-[10px] text-muted-foreground">
@@ -231,8 +240,7 @@ export function Sidebar({
 
       {catalogError && (
         <p className="-mt-2 text-xs text-muted-foreground">
-          Showing {families.length} popular families. The full Google Fonts catalogue is
-          unavailable: {catalogError}.
+          Showing {families.length} popular families.
         </p>
       )}
 

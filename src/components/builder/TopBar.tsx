@@ -37,7 +37,7 @@ export function TopBar({
     <header className="flex shrink-0 items-center justify-center border-b border-border bg-background px-4 py-3 sm:px-6 lg:h-16 lg:py-0">
       <div className="flex w-full max-w-[1760px] flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:flex-nowrap">
       <div className="min-w-0">
-        <h1 className="truncate leading-tight font-semibold tracking-tight">Theme Builder</h1>
+        <p className="truncate leading-tight font-semibold tracking-tight">Theme Builder</p>
         <p className="truncate text-sm leading-tight text-muted-foreground">Negative Split</p>
       </div>
 
@@ -94,7 +94,9 @@ export function DeviceToggle({ device, onDevice }: DeviceProps) {
     // roving focus come from the browser rather than from hand-rolled
     // role="radio" on buttons, which declared the semantics without
     // implementing the behaviour.
-    <fieldset className="flex items-center gap-1 border-0 p-0">
+    // Below sm the preview is already about as narrow as the mobile preset,
+    // so the toggle would switch between two near-identical widths.
+    <fieldset className="hidden items-center gap-1 border-0 p-0 sm:flex">
       <legend className="sr-only">Preview width</legend>
       {options.map(({ id, label, Icon }) => (
         <label

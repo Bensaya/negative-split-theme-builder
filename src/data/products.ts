@@ -41,7 +41,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 'mile-1',
     name: 'Mile 1',
-    category: 'Race day',
+    category: 'Racing',
     blurb: 'The one you save for.',
     drop: 5,
     stack: 18,
@@ -53,7 +53,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 'split-3',
     name: 'Split 3',
-    category: 'Track, 800m',
+    category: 'Track',
     blurb: 'Built for the back straight.',
     drop: 4,
     stack: 15,
@@ -65,27 +65,31 @@ export const PRODUCTS: Product[] = [
   {
     id: 'kick-r',
     name: 'Kick R',
-    category: 'Track, 5000m',
-    blurb: 'Holds on when it hurts.',
-    drop: 6,
-    stack: 17,
-    weight: 5.0,
-    price: 175,
+    category: 'Road',
+    blurb: 'Everyday miles, quick when asked.',
+    drop: 8,
+    stack: 34,
+    weight: 8.6,
+    price: 145,
     image: '/products/kick-r.jpg',
     alt: 'Kick R racing spike in red, side profile',
   },
   {
     id: 'lane-8',
     name: 'Lane 8',
-    category: 'Cross country',
-    blurb: 'Grip for the bad ground.',
+    category: 'Sale',
+    blurb: 'Last season\u2019s colour, same shoe.',
     drop: 4,
     stack: 16,
     weight: 4.9,
-    price: 160,
+    price: 110,
     image: '/products/lane-8.jpg',
     alt: 'Lane 8 cross country spike in pale blue, side profile',
   },
 ]
 
-export const NAV_LINKS = ['Road', 'Trail', 'Racing', 'Sale'] as const
+/**
+ * The nav names what the shop actually stocks. Listing "Trail" would promise a
+ * category none of the products belong to.
+ */
+export const NAV_LINKS = ['Racing', 'Track', 'Road', 'Sale'] as const

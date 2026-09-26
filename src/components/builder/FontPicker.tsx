@@ -82,7 +82,24 @@ export function FontPicker({ label, value, families, onSelect, disabled, loading
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return families
-    return families.filter((f) => f.family.toLowerCase().includes(q))
+
+    // Rank exact, then prefix, then anywhere. Typing "inter" should offer
+    // Inter before Interfaced or Bitter, which a plain substring filter
+    // buries under whatever happens to be more popular.
+    const rank = (name: string) => {
+      const n = name.toLowerCase()
+      if (n === q) return 0
+      if (n.startsWith(q)) return 1
+      return 2
+    }
+
+    return families
+      .filter((f) => f.family.toLowerCase().includes(q))
+      .map((f, index) => ({ f, index, rank: rank(f.family) }))
+      // index keeps popularity order within a rank; sort() alone is not stable
+      // across every engine for large lists.
+      .sort((a, b) => a.rank - b.rank || a.index - b.index)
+      .map((entry) => entry.f)
   }, [families, query])
 
   const virtualizer = useVirtualizer({
