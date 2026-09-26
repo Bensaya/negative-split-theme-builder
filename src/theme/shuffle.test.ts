@@ -4,6 +4,9 @@ import { BASE_COLORS, DEFAULT_THEME, RADII, THEME_COLORS, type Theme } from './t
 import { BUNDLED_FAMILIES } from '@/fonts/catalog'
 
 const POOL = BUNDLED_FAMILIES.map((f) => f.family)
+const READABLE = BUNDLED_FAMILIES.filter(
+  (f) => f.category === 'sans-serif' || f.category === 'serif',
+).map((f) => f.family)
 
 /** A deterministic stand-in for Math.random that cycles a fixed sequence. */
 const seq = (...values: number[]) => {
@@ -21,6 +24,21 @@ describe('shuffleTheme', () => {
       expect(POOL).toContain(t.headingFont)
       expect(POOL).toContain(t.bodyFont)
     }
+  })
+
+  it('draws body fonts only from sans-serif and serif', () => {
+    // A display or monospace face is fine as a heading and unreadable as a
+    // paragraph, so Shuffle must not produce one for body text.
+    for (let i = 0; i < 300; i++) {
+      expect(READABLE).toContain(shuffleTheme(DEFAULT_THEME).bodyFont)
+    }
+  })
+
+  it('still allows display faces as headings', () => {
+    const headings = new Set<string>()
+    for (let i = 0; i < 400; i++) headings.add(shuffleTheme(DEFAULT_THEME).headingFont)
+    const display = BUNDLED_FAMILIES.filter((f) => f.category === 'display').map((f) => f.family)
+    expect(display.some((f) => headings.has(f))).toBe(true)
   })
 
   it('never pairs a font with itself', () => {

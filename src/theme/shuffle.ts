@@ -29,21 +29,29 @@ type Rand = () => number
 const pick = <T>(xs: readonly T[], rand: Rand): T => xs[Math.floor(rand() * xs.length)]
 
 /**
- * The pool Shuffle draws fonts from: the same curated list the app falls back
- * to when the catalogue is unavailable. Deliberately NOT all 1,955 families -
- * uniform random over the whole catalogue mostly yields display faces that are
- * unreadable as body text.
+ * Headings can carry a display or condensed face, so they draw from the whole
+ * curated list. Deliberately NOT all 1,955 families - uniform random over the
+ * catalogue mostly yields faces nobody would choose.
  */
-const SHUFFLE_FONTS = BUNDLED_FAMILIES.map((f) => f.family)
+const HEADING_FONTS = BUNDLED_FAMILIES.map((f) => f.family)
+
+/**
+ * Body text draws from sans-serif and serif only. A display face like Bebas
+ * Neue or a monospace face is fine for a heading and unreadable as a
+ * paragraph, and Shuffle should not produce a store nobody could read.
+ */
+const BODY_FONTS = BUNDLED_FAMILIES.filter(
+  (f) => f.category === 'sans-serif' || f.category === 'serif',
+).map((f) => f.family)
 
 export function shuffleTheme(current: Theme, rand: Rand = Math.random): Theme {
-  const headingFont = pick(SHUFFLE_FONTS, rand)
+  const headingFont = pick(HEADING_FONTS, rand)
 
   // Two identical fonts is a wasted shuffle: the user sees one change, not two.
   // Drawing from the remaining families guarantees a difference in one step,
   // with no retry loop that could in principle spin.
   const bodyFont = pick(
-    SHUFFLE_FONTS.filter((f) => f !== headingFont),
+    BODY_FONTS.filter((f) => f !== headingFont),
     rand,
   )
 

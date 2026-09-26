@@ -14,12 +14,30 @@ export function Notice({
   outcome,
   onDismiss,
   failedFonts = [],
+  unresolvedFonts = [],
 }: {
   outcome: DecodeOutcome
   onDismiss: () => void
   /** Families the browser could not fetch. The request itself is unchanged. */
   failedFonts?: string[]
+  /** Fields whose font is not in the catalogue, so it fell back. */
+  unresolvedFonts?: string[]
 }) {
+  if (unresolvedFonts.length > 0) {
+    return (
+      <div
+        role="status"
+        className="flex items-start gap-3 border-b border-border bg-muted px-4 py-2.5 text-sm sm:px-6"
+      >
+        <p className="flex-1 text-muted-foreground">
+          {unresolvedFonts.length === 1
+            ? `That link asked for a ${unresolvedFonts[0]} font we do not have, so it fell back to the default.`
+            : 'That link asked for heading and body fonts we do not have, so both fell back to the default.'}
+        </p>
+      </div>
+    )
+  }
+
   if (outcome.status === 'ok' && failedFonts.length === 0) return null
 
   if (outcome.status === 'ok') {

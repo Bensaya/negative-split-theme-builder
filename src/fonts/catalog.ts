@@ -40,12 +40,26 @@ export interface CatalogResult {
 
 const API_ROOT = 'https://www.googleapis.com/webfonts/v1/webfonts'
 
-/** Family names are interpolated into stylesheet URLs, so they are untrusted. */
-const FAMILY_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N} '._+-]*$/u
-const FAMILY_MAX = 64
+/**
+ * Family names are interpolated into stylesheet URLs, so they are untrusted.
+ *
+ * Shared with the URL codec: both the catalogue and a shared link are outside
+ * input, and two copies of this rule could drift apart without anything
+ * failing loudly.
+ */
+export const FAMILY_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N} '._+-]*$/u
+
+/** Longest acceptable family name, shared for the same reason. */
+export const FAMILY_MAX_LENGTH = 64
 
 /** Menu URLs are handed to FontFace, so only Google's font CDN is accepted. */
 const MENU_HOST = 'fonts.gstatic.com'
+
+/**
+ * Icon families. They live in the catalogue but are glyph sets rather than
+ * text faces, so picking one leaves the storefront unreadable.
+ */
+const ICON_FAMILIES = /^Material (Icons|Symbols)/
 
 /**
  * Used whenever the catalogue is unavailable. Popular, legible families with
@@ -102,8 +116,9 @@ function toFamily(raw: unknown): FontFamily | null {
 
   const family = item.family
   if (typeof family !== 'string') return null
-  if (family.length === 0 || family.length > FAMILY_MAX) return null
+  if (family.length === 0 || family.length > FAMILY_MAX_LENGTH) return null
   if (!FAMILY_PATTERN.test(family)) return null
+  if (ICON_FAMILIES.test(family)) return null
 
   const category = typeof item.category === 'string' ? item.category : 'sans-serif'
 
