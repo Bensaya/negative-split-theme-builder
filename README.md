@@ -178,10 +178,17 @@ Committed tests cover the pure modules, where correctness is subtle and
 invisible: the WCAG contrast engine, token resolution, URL coding and
 validation, catalogue fallback, preview-cache identity, and font-load recovery.
 
-**There are no committed browser or end-to-end tests.** Layout, keyboard
-behaviour and the Save & Compare journeys were verified by driving the running
-app and asserting against the live DOM. That is a real gap — those checks are
-reproducible by hand but are not re-run by CI.
+```bash
+npm run test:e2e
+```
+
+Playwright covers the two journeys that only exist in a browser: the shared
+link round-trip — including a link with one invalid parameter — and Save &
+Compare. Both run in CI **without an API key**, so they exercise the fallback
+catalogue rather than a path only the author can reach.
+
+Still uncovered: keyboard navigation in the font picker, across the virtualised
+boundary. That was checked by hand and is not re-run by CI.
 
 Two defects worth naming, both found by tests before any UI existed:
 
@@ -203,7 +210,8 @@ the custom feature. Two of those entries are reversals I argued myself out of.
 
 The commit bodies say how each defect surfaced — some from the test suite, some
 only from driving the running app. Those browser checks were driven with
-Playwright MCP and are not committed as tests.
+Playwright MCP; the two journeys worth protecting are now committed as
+Playwright specs and run in CI.
 
 ## Credits
 

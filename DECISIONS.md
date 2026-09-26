@@ -148,11 +148,19 @@ deletion, quota handling and migration, for a feature whose real question is
 "was the last one better?".
 
 ## 14. Test the logic hard, do not unit-test the pixels
-**Decision:** Tests cover the pure modules — contrast, token resolution, URL
-coding, catalogue fallback, font-load recovery. No component tests, no committed
-browser tests.
-**Why:** That is where correctness is subtle and invisible, and where the bugs
-were: the AA failures in 6 were found by an exhaustive test before any UI existed.
+**Decision:** Unit tests cover the pure modules — contrast, token resolution,
+URL coding, catalogue fallback, font-load recovery. Playwright covers the two
+journeys that only exist in a browser: the shared link round-trip and Save &
+Compare. No component tests in between.
+**Why:** The pure modules are where correctness is subtle and invisible — the
+AA failures in 6 were found by an exhaustive test before any UI existed. The
+two journeys are the opposite case: nothing below the browser can prove that a
+link restores a theme, or that comparing leaves the URL alone. Both e2e specs
+run without an API key, so they exercise the fallback catalogue a reviewer sees.
+**Still uncovered:** keyboard navigation in the font picker — arrow keys across
+the virtualised boundary, Tab leaving the popover, and
+`aria-activedescendant` never naming an unmounted row. Those were checked by
+hand and are not re-run by CI.
 **Alternative rejected:** Component tests for every control; hours asserting
 that a click calls a setter, competing with the design work the brief grades.
 
@@ -163,5 +171,7 @@ that a click calls a setter, competing with the design work the brief grades.
 - **Short links.** There is no server, so two long font names make a URL of
   roughly 150 characters. With a backend, POST the theme and return an id,
   keeping the readable URL as the inspectable fallback.
-- **Browser tests in CI.** The UI journeys were checked by hand. Several defects
-  surfaced only that way, which is the argument for adding them.
+- **Keyboard coverage in CI.** The shared link and Save & Compare journeys now
+  run in CI under Playwright. Font-picker keyboard navigation does not: it
+  needs assertions about virtualised rows and `aria-activedescendant`, which is
+  a larger piece of work than the two journeys were.

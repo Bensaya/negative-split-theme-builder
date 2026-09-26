@@ -32,3 +32,29 @@ jobs:
       # therefore exercises the path a reviewer without a key actually hits:
       # the catalogue request fails and the bundled 35 families are used. A
       # suite that only passed with a key would not be testing that path.
+
+  e2e:
+    name: End-to-end tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      # Also runs without a key, so the suite covers the fallback catalogue.
+      # Every font these tests name exists in the bundled 35 families.
+      - run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

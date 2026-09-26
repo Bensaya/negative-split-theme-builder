@@ -29,3 +29,9 @@ dist-ssr
 
 # local review output (screenshots, reports) - not product code
 artifacts/
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
