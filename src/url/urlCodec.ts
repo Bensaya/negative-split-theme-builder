@@ -1,3 +1,4 @@
+import { FAMILY_MAX_LENGTH, FAMILY_PATTERN } from '@/fonts/catalog'
 import {
   BASE_COLORS,
   DEFAULT_THEME,
@@ -29,17 +30,12 @@ import {
 
 export const SCHEMA_VERSION = 1
 
-/** Longest acceptable font family name. Google's longest is well under this. */
-const FONT_MAX_LENGTH = 64
-
 /**
- * Letters, digits, spaces and a few punctuation marks that appear in real
- * family names ("Source Serif 4", "Yeseva One", "M PLUS 1p"). Unicode-aware,
- * so a non-Latin family name survives. Deliberately excludes control
- * characters and angle brackets: this string is interpolated into a stylesheet
- * URL, so it is untrusted input until proven otherwise.
+ * The shape a family name may take, shared with the catalogue so the two
+ * cannot drift. Letters, digits, spaces and a few marks that appear in real
+ * names ("Source Serif 4", "M PLUS 1p"); no control characters or angle
+ * brackets, because the value ends up in a stylesheet URL.
  */
-const FONT_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N} '._+-]*$/u
 
 export type DecodeOutcome =
   | { status: 'ok' }
@@ -60,7 +56,7 @@ export interface DecodeResult {
 }
 
 const isFontName = (value: string): boolean =>
-  value.length > 0 && value.length <= FONT_MAX_LENGTH && FONT_PATTERN.test(value)
+  value.length > 0 && value.length <= FAMILY_MAX_LENGTH && FAMILY_PATTERN.test(value)
 
 /** Reads one enum field, recording the parameter name if it falls back. */
 function readEnum<T extends string>(
@@ -117,7 +113,9 @@ export function decode(search: string): DecodeResult {
   // A missing version means version 1. Hand-edited and shortened links are a
   // normal way to arrive here, and discarding a perfectly readable theme
   // because someone trimmed `v=1` would be hostile.
-  const rawVersion = params.get('v')
+  // `?v=` with nothing after it is a trimmed link, not a version we do not
+  // know - treat it as absent rather than discarding the whole theme.
+  const rawVersion = params.get('v')?.trim() || null
   if (rawVersion !== null && rawVersion !== String(SCHEMA_VERSION)) {
     return {
       theme: DEFAULT_THEME,

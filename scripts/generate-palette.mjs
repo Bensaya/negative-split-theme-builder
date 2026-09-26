@@ -24,7 +24,7 @@ const version = JSON.parse(
 const BASE = ['neutral', 'slate', 'gray', 'zinc', 'stone']
 
 /** Accent ramps offered as "theme color". Lime/Blue/Rose/Amber/Cyan are the
- *  five in the approved design; the rest widen the space for Shuffle. */
+ *  five the README names; the rest widen the space for Shuffle. */
 const ACCENT = [
   'lime', 'blue', 'rose', 'amber', 'cyan',
   'emerald', 'violet', 'orange', 'teal', 'fuchsia', 'red', 'indigo',

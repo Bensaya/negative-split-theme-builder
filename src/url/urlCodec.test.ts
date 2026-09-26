@@ -72,6 +72,18 @@ describe('decode', () => {
     expect(r.shouldRewriteUrl).toBe(false)
   })
 
+  it('treats an empty version parameter as a missing one', () => {
+    // "?v=&base=slate" is a trimmed link, not a format we do not understand.
+    const r = decode('v=&base=slate&theme=rose')
+    expect(r.outcome.status).toBe('ok')
+    expect(r.theme.baseColor).toBe('slate')
+    expect(r.theme.themeColor).toBe('rose')
+  })
+
+  it('treats a whitespace-only version as missing too', () => {
+    expect(decode('v=%20%20&base=slate').theme.baseColor).toBe('slate')
+  })
+
   it('treats a non-numeric version as unsupported', () => {
     expect(decode('v=abc&base=slate').outcome.status).toBe('unsupported-version')
   })
