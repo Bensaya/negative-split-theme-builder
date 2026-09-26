@@ -168,10 +168,15 @@ solving a problem this UI does not have.
 
 **No `pushState`.** Browser-history undo is deliberately out of scope. An
 earlier draft pushed a history entry on Shuffle so Back would undo it, but that
-needs its own design for how pushes interact with subsequent edits and
-Forward — and Save & Compare already provides an explicit, visible
-save-and-restore that does the same job better. An app that never pushes
-behaves predictably: Back leaves, as it would from any single-page tool.
+needs its own design for how pushes interact with subsequent edits and Forward,
+and Save & Compare already provides an explicit, visible save-and-restore that
+does the same job better.
+
+The accurate guarantee is narrow: **theme edits create no history entries.**
+What Back then does is whatever the rest of the session put on the stack. In-page
+anchors such as `#grid` in the storefront still create entries, so Back may well
+move within the page before it leaves it. Anything stronger would be a claim
+about history this app does not control.
 
 Two consequences worth stating:
 
@@ -261,8 +266,11 @@ the first was sound.
 - **The URL always represents the editable theme**, never the snapshot. There is
   one meaning for the address bar and it does not change depending on which view
   is open.
-- **Fonts for the saved theme are loaded when the snapshot is taken**, so
-  switching to the saved view does not flash a fallback face.
+- **The saved theme's fonts start loading when the snapshot is taken**, which
+  usually means the saved view renders in its real typefaces immediately.
+  Starting a request is not finishing one: a slow or failed face shows fallback
+  typography there as it would anywhere else. Preloading reduces the chance of
+  a flash rather than removing it.
 
 ### The tradeoff, taken deliberately
 
@@ -315,9 +323,13 @@ to be mounted. Keyboard movement scrolls the target into view, which keeps it
 mounted — otherwise `aria-activedescendant` points at nothing and a screen
 reader announces nothing.
 
-A font that fails to load leaves the requested family in the theme and in the
-URL: the storefront shows fallback typography, a notice explains what happened,
-and choosing the family again retries.
+**When a font fails**, the requested family stays in the theme and in the URL.
+The storefront shows fallback typography and a notice explains what happened.
+Choosing that same family again triggers an explicit retry: re-picking the
+already-selected font changes no theme value, so the loader is asked directly
+rather than the theme or the URL being nudged to force a re-run. The retry
+starts a genuinely new request, shares an attempt already in flight, and clears
+the error once the face actually loads.
 
 **Without a key**, a bundled list of 35 curated families is used instead, and
 the picker says so. `.env.local` is gitignored, so this is the path anyone

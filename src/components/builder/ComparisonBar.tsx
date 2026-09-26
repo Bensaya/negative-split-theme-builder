@@ -24,25 +24,27 @@ export function ComparisonBar({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-muted px-4 py-2.5 sm:px-6">
-      <div
-        role="radiogroup"
-        aria-label="Comparison view"
-        className="flex rounded-md border border-border bg-background p-0.5"
-      >
+      {/* Native radios, so arrow keys and Tab order behave without being
+          reimplemented. */}
+      <fieldset className="flex rounded-md border border-border bg-background p-0.5">
+        <legend className="sr-only">Comparison view</legend>
         {(['saved', 'current'] as const).map((option) => (
-          <button
+          <label
             key={option}
-            type="button"
-            role="radio"
-            aria-checked={view === option}
-            onClick={() => onView(option)}
-            data-selected={view === option}
-            className="rounded-sm px-3 py-1 text-sm capitalize data-[selected=true]:bg-foreground data-[selected=true]:font-medium data-[selected=true]:text-background"
+            className="cursor-pointer rounded-sm px-3 py-1 text-sm capitalize has-checked:bg-foreground has-checked:font-medium has-checked:text-background has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
           >
+            <input
+              type="radio"
+              name="comparison-view"
+              value={option}
+              checked={view === option}
+              onChange={() => onView(option)}
+              className="sr-only"
+            />
             {option}
-          </button>
+          </label>
         ))}
-      </div>
+      </fieldset>
 
       <p className="min-w-0 flex-1 text-sm text-muted-foreground">
         {view === 'saved'

@@ -66,6 +66,17 @@ export function FontPicker({ label, value, families, onSelect, disabled }: Props
    */
   const [listEl, setListEl] = useState<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  /**
+   * Why the popover is closing, so focus can go where the key implies.
+   *
+   * Escape and selection should return focus to the trigger, which is what
+   * Radix does by default. Tab should NOT: it should leave the picker
+   * entirely and land on the next control, the way a combobox behaves
+   * everywhere else. Radix's focus restoration would otherwise pull focus
+   * back to the trigger and undo the Tab.
+   */
+  const closeReason = useRef<'escape' | 'select' | 'tab' | 'shift-tab' | null>(null)
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -134,11 +145,38 @@ export function FontPicker({ label, value, families, onSelect, disabled }: Props
   }, [open])
 
   const commit = (family: string) => {
+    closeReason.current = 'select'
     onSelect(family)
     setOpen(false)
   }
 
+  /** Moves focus to the control before or after the trigger, in DOM order. */
+  const focusAdjacent = (direction: 'forward' | 'backward') => {
+    const trigger = triggerRef.current
+    if (!trigger) return
+    const focusable = [
+      ...document.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
+      ),
+    ].filter((el) => el.offsetParent !== null || el === trigger)
+    const index = focusable.indexOf(trigger)
+    if (index === -1) return
+    const next = focusable[direction === 'forward' ? index + 1 : index - 1]
+    next?.focus()
+  }
+
   const onKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Tab') {
+      // Close and let focus continue past the picker rather than being pulled
+      // back to the trigger.
+      closeReason.current = event.shiftKey ? 'shift-tab' : 'tab'
+      setOpen(false)
+      return
+    }
+    if (event.key === 'Escape') {
+      closeReason.current = 'escape'
+      return // Radix closes and restores focus to the trigger
+    }
     if (matches.length === 0) return
     if (event.key === 'ArrowDown') {
       event.preventDefault()
@@ -169,6 +207,7 @@ export function FontPicker({ label, value, families, onSelect, disabled }: Props
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        ref={triggerRef}
         disabled={disabled}
         aria-label={label}
         aria-haspopup="listbox"
@@ -180,7 +219,18 @@ export function FontPicker({ label, value, families, onSelect, disabled }: Props
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       </PopoverTrigger>
 
-      <PopoverContent align="start" className="w-[288px] p-0">
+      <PopoverContent
+        align="start"
+        className="w-[288px] p-0"
+        onCloseAutoFocus={(event) => {
+          const reason = closeReason.current
+          closeReason.current = null
+          if (reason !== 'tab' && reason !== 'shift-tab') return
+          // Suppress Radix's restore-to-trigger and honour the Tab instead.
+          event.preventDefault()
+          focusAdjacent(reason === 'tab' ? 'forward' : 'backward')
+        }}
+      >
         <div className="flex items-center gap-2 border-b border-border px-3">
           <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           <input

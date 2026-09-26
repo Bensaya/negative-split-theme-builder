@@ -29,7 +29,7 @@ import { useThemeUrl } from '@/url/useThemeUrl'
  * room does the preview have" - and the device toggle only changes the second.
  */
 export default function App() {
-  const { theme, applyTheme, updateTheme, arrival, dismissArrival, shareHref } =
+  const { theme, applyTheme, updateTheme, arrival, dismissArrival, shareHref, getTheme } =
     useThemeUrl(DEFAULT_THEME)
   const [device, setDevice] = useState<Device>('desktop')
   const [copied, setCopied] = useState<'idle' | 'ok' | 'failed'>('idle')
@@ -48,7 +48,7 @@ export default function App() {
   // Statuses are tracked but the requested family always stays in the theme
   // and the URL: a font that will not load is a rendering problem, not a
   // reason to silently rewrite what the user asked for.
-  const fontStatus = useGoogleFonts(
+  const { status: fontStatus, retry: retryFont } = useGoogleFonts(
     theme.headingFont,
     theme.bodyFont,
     saved?.headingFont,
@@ -61,9 +61,21 @@ export default function App() {
   // Composes against the latest theme, not the one captured when this
   // callback was created - otherwise two edits in the same tick lose the first.
   const update = useCallback(
-    <K extends keyof Theme>(key: K, value: Theme[K]) =>
-      updateTheme((current) => ({ ...current, [key]: value })),
-    [updateTheme],
+    <K extends keyof Theme>(key: K, value: Theme[K]) => {
+      // Re-picking the family that is already selected is how the user asks to
+      // retry a font that failed to load. It changes no theme value, so
+      // nothing the loader watches would change - hence an explicit retry
+      // rather than nudging the theme or the URL to force one.
+      if (key === 'headingFont' || key === 'bodyFont') {
+        const current = getTheme()
+        if (current[key] === value) {
+          if (fontStatus[value as string] === 'failed') retryFont(value as string)
+          return
+        }
+      }
+      updateTheme((current) => ({ ...current, [key]: value }))
+    },
+    [updateTheme, getTheme, retryFont, fontStatus],
   )
 
   // shuffleTheme() calls Math.random(). updateTheme is NOT a React state

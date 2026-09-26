@@ -1,21 +1,8 @@
 import { Check, Link2, Monitor, Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { DEVICE_WIDTH, type Device } from './device'
 
-export type Device = 'desktop' | 'mobile'
-
-/**
- * Width the preview container is pinned to.
- *
- * Mobile is capped by the space actually available, not a bare 420px: on a
- * phone the panel is narrower than that, and a fixed width would push the
- * page into horizontal scrolling. The storefront reads its own width through
- * @container, so constraining this box is all it takes - the browser viewport
- * and the preview's available width stay separate things.
- */
-export const DEVICE_WIDTH: Record<Device, string> = {
-  desktop: '100%',
-  mobile: 'min(420px, 100%)',
-}
+export { DEVICE_WIDTH, type Device }
 
 interface DeviceProps {
   device: Device
@@ -98,22 +85,30 @@ export function DeviceToggle({ device, onDevice }: DeviceProps) {
     { id: 'mobile', label: 'Mobile', Icon: Smartphone },
   ]
   return (
-    <div role="radiogroup" aria-label="Preview width" className="flex items-center gap-1">
+    // Native radios in a fieldset: arrow keys, one tab stop for the group and
+    // roving focus come from the browser rather than from hand-rolled
+    // role="radio" on buttons, which declared the semantics without
+    // implementing the behaviour.
+    <fieldset className="flex items-center gap-1 border-0 p-0">
+      <legend className="sr-only">Preview width</legend>
       {options.map(({ id, label, Icon }) => (
-        <button
+        <label
           key={id}
-          type="button"
-          role="radio"
-          aria-checked={device === id}
-          aria-label={label}
           title={label}
-          onClick={() => onDevice(id)}
-          data-selected={device === id}
-          className="rounded-md border border-transparent p-1.5 text-muted-foreground transition-colors hover:text-foreground data-[selected=true]:border-border data-[selected=true]:bg-background data-[selected=true]:text-foreground"
+          className="cursor-pointer rounded-md border border-transparent p-1.5 text-muted-foreground transition-colors hover:text-foreground has-checked:border-border has-checked:bg-background has-checked:text-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
         >
-          <Icon className="size-4" />
-        </button>
+          <input
+            type="radio"
+            name="preview-width"
+            value={id}
+            checked={device === id}
+            onChange={() => onDevice(id)}
+            className="sr-only"
+          />
+          <Icon className="size-4" aria-hidden />
+          <span className="sr-only">{label}</span>
+        </label>
       ))}
-    </div>
+    </fieldset>
   )
 }

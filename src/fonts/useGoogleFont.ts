@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 /**
  * Loads storefront fonts, and reports honestly whether they arrived.
@@ -99,6 +99,21 @@ export function ensureFont(family: string): Promise<FontStatus> {
   return promise
 }
 
+export interface GoogleFonts {
+  /** Per-family load status. A family not yet reported on reads as pending. */
+  status: Record<string, FontStatus>
+  /**
+   * Re-attempts a family that failed.
+   *
+   * Needed because the UI offers "pick it again to retry", and picking the
+   * family that is already selected changes no theme value - so nothing the
+   * loader watches changes and the effect never re-runs. Retrying must not be
+   * faked by nudging the theme or the URL: the user's selection is already
+   * correct, it is only the network that failed.
+   */
+  retry: (family: string) => void
+}
+
 /**
  * Loads the given families and reports each one's status.
  *
@@ -106,33 +121,57 @@ export function ensureFont(family: string): Promise<FontStatus> {
  * that will not load is a rendering problem, not a reason to silently rewrite
  * what the user asked for.
  */
-export function useGoogleFonts(...families: (string | undefined)[]): Record<string, FontStatus> {
+export function useGoogleFonts(...families: (string | undefined)[]): GoogleFonts {
   const key = families.filter(Boolean).join('|')
-  const [statuses, setStatuses] = useState<Record<string, FontStatus>>({})
+  const [reported, setReported] = useState<Record<string, FontStatus>>({})
 
   // Identifies the newest request, so a slow earlier one cannot report over it.
   const generation = useRef(0)
 
+  const wanted = useMemo(() => (key ? key.split('|') : []), [key])
+
+  /**
+   * Pending is DERIVED rather than written during the effect. Writing it there
+   * would set state synchronously inside an effect, which starts another
+   * render for something the render pass can work out on its own.
+   */
+  const status = useMemo(() => {
+    const out: Record<string, FontStatus> = {}
+    for (const family of wanted) out[family] = reported[family] ?? 'pending'
+    return out
+  }, [wanted, reported])
+
+  const track = useCallback((family: string, generationAtStart: number) => {
+    void ensureFont(family).then((next) => {
+      // A completion from a superseded selection is discarded rather than
+      // flipping the status of whatever the user has chosen since.
+      if (generation.current !== generationAtStart) return
+      setReported((prev) => (prev[family] === next ? prev : { ...prev, [family]: next }))
+    })
+  }, [])
+
   useEffect(() => {
     const current = ++generation.current
-    const wanted = key ? key.split('|') : []
-    if (wanted.length === 0) return
+    for (const family of wanted) track(family, current)
+  }, [wanted, track])
 
-    setStatuses((prev) => {
-      const next = { ...prev }
-      for (const f of wanted) next[f] ??= 'pending'
-      return next
-    })
-
-    for (const family of wanted) {
-      void ensureFont(family).then((status) => {
-        // A completion from a superseded selection is discarded rather than
-        // flipping the status of whatever the user has chosen since.
-        if (generation.current !== current) return
-        setStatuses((prev) => (prev[family] === status ? prev : { ...prev, [family]: status }))
+  const retry = useCallback(
+    (family: string) => {
+      if (!family) return
+      // Drop the recorded failure so the family reads as pending again, then
+      // start a fresh attempt. ensureFont already evicted the failed cache
+      // entry, so this genuinely re-requests rather than returning the old
+      // rejected promise - and an in-flight attempt is still shared.
+      setReported((prev) => {
+        if (!(family in prev)) return prev
+        const next = { ...prev }
+        delete next[family]
+        return next
       })
-    }
-  }, [key])
+      track(family, ++generation.current)
+    },
+    [track],
+  )
 
-  return statuses
+  return { status, retry }
 }

@@ -42,6 +42,8 @@ export interface ThemeUrl {
   dismissArrival: () => void
   /** Current shareable link, built from state rather than read from the bar. */
   shareHref: () => string
+  /** The newest theme, readable synchronously without a stale closure. */
+  getTheme: () => Theme
 }
 
 export function useThemeUrl(fallback: Theme): ThemeUrl {
@@ -113,7 +115,9 @@ export function useThemeUrl(fallback: Theme): ThemeUrl {
       : buildHref(current, window.location.href)
   }, [])
 
+  const getTheme = useCallback(() => themeRef.current, [])
+
   const dismissArrival = useCallback(() => setArrival({ status: 'ok' }), [])
 
-  return { theme, applyTheme, updateTheme, arrival, dismissArrival, shareHref }
+  return { theme, applyTheme, updateTheme, arrival, dismissArrival, shareHref, getTheme }
 }
