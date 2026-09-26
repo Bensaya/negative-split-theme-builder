@@ -31,32 +31,16 @@ function ensureLink(family: string) {
   document.head.appendChild(link)
 }
 
-/** Loads each family once. Safe to call with the same names repeatedly. */
-export function useGoogleFonts(...families: string[]) {
+/**
+ * Loads each family once. Safe to call with the same names repeatedly, and
+ * accepts undefined so callers can pass an optional theme's fonts (the saved
+ * comparison snapshot) without branching at the call site.
+ */
+export function useGoogleFonts(...families: (string | undefined)[]) {
   const key = families.join('|')
   useEffect(() => {
-    for (const f of families) ensureLink(f)
+    for (const f of families) if (f) ensureLink(f)
     // `key` captures the families; spreading them would change identity each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
 }
-
-/** Families offered until the full Google Fonts catalogue lands. */
-export const STARTER_FONTS = [
-  'Inter Tight',
-  'Inter',
-  'Archivo',
-  'Bricolage Grotesque',
-  'DM Sans',
-  'Fraunces',
-  'IBM Plex Sans',
-  'Lora',
-  'Manrope',
-  'Newsreader',
-  'Oswald',
-  'Outfit',
-  'Playfair Display',
-  'Source Serif 4',
-  'Space Grotesk',
-  'Work Sans',
-] as const

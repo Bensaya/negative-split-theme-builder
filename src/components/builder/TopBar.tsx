@@ -21,9 +21,17 @@ interface Props {
   onCopyLink: () => void
   canCompare: boolean
   copied: 'idle' | 'ok' | 'failed'
+  justSaved: boolean
 }
 
-export function TopBar({ onSave, onCompare, onCopyLink, canCompare, copied }: Props) {
+export function TopBar({
+  onSave,
+  onCompare,
+  onCopyLink,
+  canCompare,
+  copied,
+  justSaved,
+}: Props) {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-background px-6">
       <div className="min-w-0">
@@ -32,9 +40,13 @@ export function TopBar({ onSave, onCompare, onCopyLink, canCompare, copied }: Pr
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onSave}>
-          Save for comparison
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={onSave}>
+          {justSaved && <Check className="size-3.5" aria-hidden />}
+          {justSaved ? 'Saved' : 'Save for comparison'}
         </Button>
+        <span aria-live="polite" className="sr-only">
+          {justSaved ? 'Theme saved for comparison' : ''}
+        </span>
         <Button variant="outline" size="sm" onClick={onCompare} disabled={!canCompare}>
           Compare
         </Button>

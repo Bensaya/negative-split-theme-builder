@@ -1,4 +1,4 @@
-import { STARTER_FONTS } from '@/fonts/useGoogleFont'
+import { BUNDLED_FAMILIES } from '@/fonts/catalog'
 import {
   BASE_COLORS,
   MENU_ACCENTS,
@@ -28,14 +28,22 @@ type Rand = () => number
 
 const pick = <T>(xs: readonly T[], rand: Rand): T => xs[Math.floor(rand() * xs.length)]
 
+/**
+ * The pool Shuffle draws fonts from: the same curated list the app falls back
+ * to when the catalogue is unavailable. Deliberately NOT all 1,955 families -
+ * uniform random over the whole catalogue mostly yields display faces that are
+ * unreadable as body text.
+ */
+const SHUFFLE_FONTS = BUNDLED_FAMILIES.map((f) => f.family)
+
 export function shuffleTheme(current: Theme, rand: Rand = Math.random): Theme {
-  const headingFont = pick(STARTER_FONTS, rand)
+  const headingFont = pick(SHUFFLE_FONTS, rand)
 
   // Two identical fonts is a wasted shuffle: the user sees one change, not two.
   // Drawing from the remaining families guarantees a difference in one step,
   // with no retry loop that could in principle spin.
   const bodyFont = pick(
-    STARTER_FONTS.filter((f) => f !== headingFont),
+    SHUFFLE_FONTS.filter((f) => f !== headingFont),
     rand,
   )
 

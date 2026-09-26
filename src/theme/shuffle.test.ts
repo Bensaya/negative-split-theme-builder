@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { shuffleTheme } from './shuffle'
 import { BASE_COLORS, DEFAULT_THEME, RADII, THEME_COLORS, type Theme } from './theme'
-import { STARTER_FONTS } from '@/fonts/useGoogleFont'
+import { BUNDLED_FAMILIES } from '@/fonts/catalog'
+
+const POOL = BUNDLED_FAMILIES.map((f) => f.family)
 
 /** A deterministic stand-in for Math.random that cycles a fixed sequence. */
 const seq = (...values: number[]) => {
@@ -16,8 +18,8 @@ describe('shuffleTheme', () => {
       expect(BASE_COLORS).toContain(t.baseColor)
       expect(THEME_COLORS).toContain(t.themeColor)
       expect(RADII).toContain(t.radius)
-      expect(STARTER_FONTS).toContain(t.headingFont as (typeof STARTER_FONTS)[number])
-      expect(STARTER_FONTS).toContain(t.bodyFont as (typeof STARTER_FONTS)[number])
+      expect(POOL).toContain(t.headingFont)
+      expect(POOL).toContain(t.bodyFont)
     }
   })
 
@@ -45,8 +47,8 @@ describe('shuffleTheme', () => {
       radius: RADII[0],
       menuColor: 'default',
       menuAccent: 'subtle',
-      headingFont: STARTER_FONTS[0],
-      bodyFont: STARTER_FONTS[1],
+      headingFont: POOL[0],
+      bodyFont: POOL[1],
     }
     const t = shuffleTheme(current, seq(0))
     expect(t).not.toEqual(current)
