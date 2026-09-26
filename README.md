@@ -6,12 +6,10 @@ re-themes live on the right. Every combination is a shareable link.
 
 Built with Vite, React, TypeScript, Tailwind CSS v4 and shadcn/ui. No backend.
 
-> **Status.** The theme model, the palette, the WCAG contrast engine and the
-> token resolver are implemented and tested. The storefront preview, the
-> sidebar, the font pickers, the URL sync and Save & Compare are in progress.
-> The two sections this README is written around — the URL approach and the
-> custom feature — describe decisions that are settled; where the code has not
-> landed yet it is marked.
+> **Status.** Complete. Every configuration control, the shareable URL, Shuffle
+> and Save & Compare are implemented and working. 80 unit tests cover the pure
+> modules; the integration behaviour was verified by driving the real UI, and
+> several of the bugs described below were found that way rather than by test.
 
 ---
 
@@ -34,7 +32,7 @@ npm run dev          # http://localhost:5173
 
 The font pickers use the Google Fonts Developer API to list the full catalogue.
 **The app works without a key** — it falls back to a bundled list of popular
-families — but with one you get all ~1,900 families.
+families, but with one you get all 1,955 families.
 
 ```bash
 cp .env.example .env.local
@@ -48,7 +46,7 @@ billing account required.
 
 Note that a `VITE_`-prefixed variable is compiled into the browser bundle and is
 therefore **public**. That is acceptable for this API — it is a read-only public
-catalogue, and the key can be restricted by HTTP referrer — but it is not a
+catalogue, and the key can be restricted by HTTP referrer, but it is not a
 secret and is not treated as one here.
 
 ---
@@ -87,7 +85,7 @@ Two other approaches were considered:
 derived from `location.search` on each render. The shareable link then comes for
 free. Rejected because every slider nudge becomes a history operation, parsing
 runs on every render, and every component ends up coupled to the serialization
-format — which also makes the format much harder to change later.
+format, which also makes the format much harder to change later.
 
 **Two-way sync**, where state watches the URL and the URL watches the state.
 This is the trap. State writes the URL, the URL write triggers a read, the read
@@ -98,13 +96,13 @@ yourself. It is a familiar bug and worth designing out rather than debugging.
 
 The alternative was base64 of a JSON object: shorter, tidier, and completely
 opaque. Readable parameters were chosen because a reviewer can understand the
-link at a glance and can hand-edit one value to test a specific case — which
+link at a glance and can hand-edit one value to test a specific case, which
 matters for an exercise that is partly *about* the URL. The blob would also
 still need a version marker, so it saves less than it first appears.
 
 The tradeoff accepted: longer URLs, and the parameter names become a public
 contract that older links depend on. The `v=1` parameter is how that contract
-is allowed to change — an unrecognised version falls back to the default theme
+is allowed to change. an unrecognised version falls back to the default theme
 rather than guessing at a format it does not understand.
 
 ### Validation: per-field, and it never throws
@@ -129,7 +127,7 @@ should not cost the user the other six settings they were sent.
 | Missing parameter | That field defaults |
 | Duplicated parameter | First occurrence wins |
 | Unencoded space in a font name | Accepted; `+` and `%20` both parse |
-| `v` missing | Treated as version 1 — a trimmed or hand-edited link still works |
+| `v` missing | Treated as version 1. a trimmed or hand-edited link still works |
 | `v` present but unsupported (`v=2`) | Whole theme defaults, a notice explains why, **and the URL is left untouched** |
 | Font name over 64 chars, or containing control characters or `<` | That field defaults |
 
@@ -155,7 +153,7 @@ never overwritten with a default while the catalogue is loading or unavailable.
 
 ### History: one verb, immediate
 
-Every theme change — including Shuffle and restoring a saved theme — writes
+Every theme change, including Shuffle and restoring a saved theme, writes
 immediately with `replaceState`.
 
 **No debounce.** All seven controls are discrete selections: swatches, segmented
@@ -235,7 +233,7 @@ It reuses machinery the project already needs rather than adding a subsystem:
 - A snapshot is a `Theme`, so it serializes through the **same `encode()`** as
   the shareable URL.
 - The comparison view renders the **same storefront component** with a different
-  token set — which is only possible because theming is scoped to a wrapper
+  token set, which is only possible because theming is scoped to a wrapper
   element rather than `:root`. Two themes can therefore exist on one page at the
   same time.
 
@@ -277,6 +275,42 @@ the durable way to keep a theme, and it works across devices and people, which
 `localStorage` does not. Save & Compare is deliberately the *ephemeral* tool —
 scratch space for the ten seconds when you are deciding — and the URL is the
 permanent one.
+
+---
+
+## Fonts
+
+Two Google APIs are involved and they have opposite requirements:
+
+| | Needs a key | Returns |
+| --- | --- | --- |
+| Web Fonts **Developer API** | yes | the catalogue — 1,955 families |
+| **CSS2 API** | no | the actual font files |
+
+So the key gates the *list*, never the rendering. That distinction matters:
+a catalogue failure does not stop a font the user already asked for from
+loading, because those are separate operations that fail separately.
+
+**Previews.** Each catalogue entry carries a `menu` URL — a font file holding
+only the glyphs of that family's own name, versioned and immutable
+(`max-age=31536000`), so a family is fetched at most once ever. The picker
+registers it through `FontFace` under an **alias** (`Inter __menu`).
+
+Choosing the name is what makes the obvious bug impossible. A cache keyed by
+family would conflate *"I loaded the 20-glyph name subset"* with *"I loaded the
+full font"* — select a previewed font and the storefront would render with only
+the letters of that font's name available. Separate namespaces mean the
+collision cannot happen, rather than merely not happening.
+
+**Virtualisation.** ~13 of 1,955 rows are in the DOM at a time. Search filters
+the whole catalogue *before* windowing, or it would only ever find what happened
+to be mounted. Keyboard movement scrolls the target into view, which keeps it
+mounted — otherwise `aria-activedescendant` points at nothing and a screen
+reader announces nothing.
+
+**Without a key**, a bundled list of 35 curated families is used instead, and
+the picker says so. `.env.local` is gitignored, so this is the path anyone
+cloning the repo will actually hit — not an edge case.
 
 ---
 

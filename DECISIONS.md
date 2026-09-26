@@ -4,9 +4,9 @@ A running log of the choices behind this project: what was decided, why, and
 what was rejected. Written to be readable by someone who does not work in
 frontend day to day.
 
-Entries are grouped by area, roughly in the order they were made. Anything
-marked **Designed, not yet built** is a settled decision whose code has not
-landed; it will be re-checked against the implementation when it does.
+Entries are grouped by area, roughly in the order they were made. Several
+record a decision that was later reversed; those are kept as reversals rather
+than rewritten, because the reasoning on both sides is the useful part.
 
 ---
 
@@ -62,7 +62,7 @@ The practical upshot: **there is no "apply the theme" code in this project.**
 The CSS cascade does the propagation. Verified by compiling Tailwind 4.3.3
 directly and reading the generated output.
 
-**Rejected — an `<iframe>`.** Genuine style isolation, but you must re-inject
+**Rejected, an `<iframe>`.** Genuine style isolation, but you must re-inject
 the stylesheet into the frame, font loading gets awkward, and container queries
 lose their point because an iframe already sizes to its own box. Real
 isolation, far more machinery, no benefit at this scope.
@@ -131,14 +131,14 @@ visibly contradicts the specification we were given.
 gamma`, then applies the WCAG relative-luminance and ratio formulas.
 
 **Why.** Our colours are `oklch` but WCAG is defined on sRGB relative
-luminance. oklch's `L` channel is *perceptual lightness* — a different
+luminance. oklch's `L` channel is *perceptual lightness*, a different
 quantity. Using it as a shortcut is three lines and gives answers that are
 close enough to look right and wrong often enough to ship unreadable text.
 
-**Rejected — an oklch lightness threshold.** Fast, approximately right, and not
+**Rejected, an oklch lightness threshold.** Fast, approximately right, and not
 defensible if anyone asks whether the app is actually WCAG compliant.
 
-**Rejected — a colour library (`culori`, `colorjs.io`).** Correct and quick,
+**Rejected, a colour library (`culori`, `colorjs.io`).** Correct and quick,
 but it is a dependency for about forty lines of arithmetic, and writing it
 directly is the more defensible answer for an exercise partly about judgement.
 
@@ -180,7 +180,7 @@ menu.
 
 **Why.** All four combinations are readable *by construction*, because they are
 derived from a base pair whose contrast is already settled. It is also what
-shadcn itself does — the generated `components.json` in this repo literally
+shadcn itself does, the generated `components.json` in this repo literally
 contains `"menuColor": "default"` and `"menuAccent": "subtle"`.
 
 **Rejected.** Free colour pickers with automatically derived foregrounds. This
@@ -240,7 +240,7 @@ navigation flows URL → state; neither triggers the other, because
 `pushState` and `replaceState` **do not fire `popstate`**. That last fact is
 what makes Back and Forward safe to support without guard flags.
 
-**Rejected — the URL as the source of truth.** "Shareable link comes free", but
+**Rejected, the URL as the source of truth.** "Shareable link comes free", but
 every control write becomes a history operation, parsing happens on every
 render, and every component is coupled to the serialization format.
 
@@ -365,7 +365,7 @@ by a unit test.
 URL write and Shuffle's `Math.random()` inside an updater React invokes twice
 under StrictMode.
 
-## Fonts — **Designed, not yet built**
+## Fonts
 
 ### 17. Live Google Fonts API, with a bundled fallback list
 
@@ -380,8 +380,8 @@ broken to the person grading it. The fallback is the path a reviewer is most
 likely to hit, not an edge case.
 
 **Noted honestly.** A `VITE_`-prefixed variable is compiled into the browser
-bundle and is therefore public. That is acceptable here — it is a read-only
-public catalogue and the key can be restricted by HTTP referrer — but it is
+bundle and is therefore public. That is acceptable here, it is a read-only
+public catalogue and the key can be restricted by HTTP referrer, but it is
 not a secret and should not be described as one.
 
 ---
@@ -389,7 +389,7 @@ not a secret and should not be described as one.
 ### 18. Font previews use the API's `menu` subset, not batched CSS2 requests
 
 **What.** Each row in the picker renders in its own typeface, loaded from the
-`menu` URL that the Developer API already returns for every family — a font
+`menu` URL that the Developer API already returns for every family, a font
 file containing only the glyphs of that family's own name — registered via
 `new FontFace(alias, url)`.
 
@@ -430,9 +430,9 @@ duplicate requests for the same family.
 
 ### 20. Virtualised list via `@tanstack/react-virtual`
 
-**What.** Only the visible rows of the ~1,900-family list are rendered.
+**What.** Only the visible rows of the 1,955-family list are rendered.
 
-**Why.** 1,900 DOM nodes in a popover is not viable. Hand-rolling windowing is
+**Why.** 1,955 DOM nodes in a popover is not viable. Hand-rolling windowing is
 about forty lines, but the edge cases — dynamic measurement, scroll
 restoration, overscan — are exactly what makes homegrown virtualisation subtly
 janky. "I used the standard virtualiser" is easier to defend than a bespoke one
@@ -453,7 +453,7 @@ option must stay mounted, or keyboard navigation breaks past the first screen.
 into Tailwind v4 core and need no plugin. A Desktop/Mobile toggle above the
 preview constrains the container's width.
 
-**Why.** Container queries are the right mechanism — the preview should reflow
+**Why.** Container queries are the right mechanism, the preview should reflow
 because *the preview* is narrow, not because the browser window is. But if the
 panel width never changes, the distinction is invisible and the claim is
 untestable. The toggle makes it demonstrable in one click, and is a real
@@ -480,7 +480,7 @@ images are brand-owned; shipping them in a take-home is not defensible.
 
 ---
 
-## The custom feature — **Designed, not yet built**
+## The custom feature
 
 ### 23. Save & Compare
 
