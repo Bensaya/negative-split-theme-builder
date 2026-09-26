@@ -109,10 +109,12 @@ export default function App() {
     comparing && view === 'saved' && savedTokens ? savedTokens : currentTokens
 
   return (
-    // overflow-x-hidden is the backstop against accidental horizontal scroll:
-    // nothing inside should overflow, and if something does it must not drag
-    // the whole page sideways.
-    <div className="flex h-dvh flex-col overflow-x-hidden bg-background text-foreground">
+    // overflow-hidden, not overflow-x-hidden. Setting only one axis to hidden
+    // makes the OTHER axis compute from `visible` to `auto` - so the shell
+    // quietly became a vertical scroll container, and scrolling it dragged the
+    // app off-screen to reveal the page background beneath. Both axes are
+    // clipped here; the sidebar and the preview each scroll on their own.
+    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
       <TopBar
         onSave={saveSnapshot}
         onCompare={() => {

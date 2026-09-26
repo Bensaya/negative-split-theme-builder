@@ -451,6 +451,28 @@ option must stay mounted, or keyboard navigation breaks past the first screen.
 
 ## Presentation
 
+### 20a. The shell clips both axes, and the page never scrolls
+
+**What.** The app shell uses `overflow: hidden` on both axes, and `html`,
+`body` and `#root` are pinned to `height: 100%` with `overscroll-behavior:
+none`.
+
+**Why.** `overflow-x: hidden` alone does not do what it looks like it does:
+per the CSS spec, when one axis is not `visible` the other computes from
+`visible` to `auto`. So a shell meant only to prevent sideways scrolling
+silently became a vertical scroll container. Combined with rubber-band
+overscroll, dragging up pulled the whole app off screen and exposed the white
+page background beneath it as a large empty rectangle.
+
+The builder is a fixed-height app shell rather than a document: the sidebar and
+the preview scroll independently and the page itself never should.
+
+**Rejected.** Leaving `overflow-x-hidden` and papering over the gap by giving
+the body the same background. That hides one symptom of a shell that is
+scrolling when it should not be, and the top bar would still drift.
+
+---
+
 ### 21. The preview responds to its own width, and a device toggle proves it
 
 **What.** The storefront uses container queries (`@container`), which are built

@@ -128,6 +128,21 @@
 }
 
 @layer base {
+    /*
+     * The builder is a fixed-height app shell, not a document: the sidebar and
+     * the preview scroll independently and the page itself never should.
+     * Pinning html/body stops rubber-band overscroll from pulling the shell
+     * away and exposing the page background behind it, and overscroll-behavior
+     * stops an inner pane's scroll from chaining out to the page.
+     */
+    html,
+    body,
+    #root {
+        height: 100%;
+        overflow: hidden;
+        overscroll-behavior: none;
+    }
+
   * {
     @apply border-border outline-ring/50;
     }
