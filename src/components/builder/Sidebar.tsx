@@ -1,13 +1,7 @@
 import { Check, Dices, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { STARTER_FONTS } from '@/fonts/useGoogleFont'
+import { FontPicker } from './FontPicker'
+import type { FontFamily } from '@/fonts/catalog'
 import { PALETTE } from '@/theme/palette'
 import {
   BASE_COLORS,
@@ -37,6 +31,9 @@ interface Props {
   onChange: <K extends keyof Theme>(key: K, value: Theme[K]) => void
   onShuffle: () => void
   onReset: () => void
+  families: FontFamily[]
+  /** Set when the catalogue could not be fetched; the bundled list is in use. */
+  catalogError?: string
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -135,34 +132,14 @@ function Segmented<T extends string>({
   )
 }
 
-/** Font picker. A plain Select for now; the full catalogue lands next. */
-function FontSelect({
-  value,
-  onSelect,
-  label,
-}: {
-  value: string
-  onSelect: (v: string) => void
-  label: string
-}) {
-  return (
-    <Select value={value} onValueChange={onSelect}>
-      <SelectTrigger className="w-full" aria-label={label}>
-        <span className="mr-2 text-muted-foreground">Aa</span>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {STARTER_FONTS.map((f) => (
-          <SelectItem key={f} value={f}>
-            {f}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-}
-
-export function Sidebar({ theme, onChange, onShuffle, onReset }: Props) {
+export function Sidebar({
+  theme,
+  onChange,
+  onShuffle,
+  onReset,
+  families,
+  catalogError,
+}: Props) {
   return (
     <aside className="flex w-[280px] shrink-0 flex-col gap-6 overflow-y-auto border-r border-border bg-background p-6">
       <div>
@@ -191,20 +168,29 @@ export function Sidebar({ theme, onChange, onShuffle, onReset }: Props) {
       </Field>
 
       <Field label="Heading font">
-        <FontSelect
+        <FontPicker
           label="Heading font"
           value={theme.headingFont}
+          families={families}
           onSelect={(v) => onChange('headingFont', v)}
         />
       </Field>
 
       <Field label="Body font">
-        <FontSelect
+        <FontPicker
           label="Body font"
           value={theme.bodyFont}
+          families={families}
           onSelect={(v) => onChange('bodyFont', v)}
         />
       </Field>
+
+      {catalogError && (
+        <p className="-mt-2 text-xs text-muted-foreground">
+          Showing {families.length} popular families. The full Google Fonts
+          catalogue is unavailable: {catalogError}.
+        </p>
+      )}
 
       <Field label="Radius">
         <Segmented

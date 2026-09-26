@@ -4,6 +4,7 @@ import { DEVICE_WIDTH, DeviceToggle, TopBar, type Device } from '@/components/bu
 import { Notice } from '@/components/builder/Notice'
 import { Storefront } from '@/components/storefront/Storefront'
 import { useGoogleFonts } from '@/fonts/useGoogleFont'
+import { useFontCatalog } from '@/fonts/useFontCatalog'
 import { useThemeUrl } from '@/url/useThemeUrl'
 import { shuffleTheme } from '@/theme/shuffle'
 import { DEFAULT_THEME, type Theme } from '@/theme/theme'
@@ -25,6 +26,7 @@ export default function App() {
     useThemeUrl(DEFAULT_THEME)
   const [device, setDevice] = useState<Device>('desktop')
   const [copied, setCopied] = useState<'idle' | 'ok' | 'failed'>('idle')
+  const catalog = useFontCatalog()
 
   useGoogleFonts(theme.headingFont, theme.bodyFont)
 
@@ -71,6 +73,8 @@ export default function App() {
           onChange={update}
           onShuffle={shuffle}
           onReset={() => applyTheme(DEFAULT_THEME)}
+          families={catalog.families}
+          catalogError={catalog.loading ? undefined : catalog.error}
         />
 
         <main className="flex min-w-0 flex-1 flex-col bg-muted/40">
