@@ -103,6 +103,16 @@ evidence in the one case someone is debugging.
 undebuggable, still needs a version marker, and one bad character costs the
 other six settings.
 
+| Case | Behaviour |
+| --- | --- |
+| No query string | Default theme |
+| Unknown value (`base=chartreuse`) | That field defaults, others kept |
+| Unknown parameter | Ignored |
+| Duplicated parameter | First wins |
+| `v` missing or empty | Treated as version 1 |
+| `v` present but unsupported | Whole theme defaults, notice shown, URL left untouched |
+| Font name over 64 chars, or containing control characters | That field defaults |
+
 ## 10. Fonts resolve against the catalogue, not the browser
 **Decision:** `decode()` carries font names through as opaque strings;
 `resolveFamily()` matches them case-insensitively once the catalogue exists,
@@ -115,6 +125,18 @@ gitignored, so the fallback is the path a reviewer actually hits.
 **Alternative rejected:** Asking the browser whether it can render the name; it
 would accept `Helvetica Neue` on a machine that has it, so the link would look
 right only to the sender.
+
+Two Google APIs are involved, with opposite requirements: the Developer API
+needs a key and returns the catalogue, while the CSS2 API needs no key and
+returns the font files. The key gates the *list*, never the rendering, which is
+why a catalogue failure does not stop a font the user already asked for from
+loading.
+
+When a font does fail, the requested family stays in the theme and in the URL.
+The storefront shows fallback type, a notice explains, and re-picking that same
+family triggers an explicit retry: re-selecting the already-selected family
+changes no theme value, so the loader is asked directly rather than the theme
+being nudged into forcing a re-run.
 
 ## 11. Previews use each family's `menu` subset, under an alias, virtualised
 **Decision:** The picker registers the API's `menu` file through
@@ -145,7 +167,9 @@ comparison renders the same storefront with a second token set, which works only
 because theming is scoped to a wrapper.
 **Alternative rejected:** Multiple named snapshots in `localStorage`; a list UI,
 deletion, quota handling and migration, for a feature whose real question is
-"was the last one better?".
+"was the last one better?". The snapshot is held in memory for the
+page session and is lost on refresh, deliberately: the shareable URL is already
+the durable mechanism, so this one is the scratch pad.
 
 ## 14. Test the logic hard, do not unit-test the pixels
 **Decision:** Unit tests cover the pure modules — contrast, token resolution,
