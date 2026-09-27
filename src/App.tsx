@@ -204,7 +204,7 @@ export default function App() {
           group: arrow-key navigation could land on a control inside the hidden
           copy.
         */}
-        <div className="flex shrink-0 flex-col border-b border-border lg:min-h-0 lg:w-[280px] lg:min-w-[280px] lg:border-r lg:border-b-0">
+        <div className="flex shrink-0 flex-col border-b border-border lg:min-h-0 lg:w-[320px] lg:min-w-[320px] lg:border-r lg:border-b-0">
           <button
             type="button"
             onClick={() => setPanelOpen((o) => !o)}

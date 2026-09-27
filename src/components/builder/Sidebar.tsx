@@ -50,14 +50,22 @@ interface Props {
 
 function Group({
   label,
+  hint,
   children,
 }: {
   label: string
+  /** The current value, shown beside the label. Swatch grids have no visible
+   *  per-option captions - twenty of them cost more vertical space than the
+   *  whole menu section - so this is where you read what is selected. */
+  hint?: string
   children: React.ReactNode
 }) {
   return (
-    <fieldset className="flex flex-col gap-2.5 border-0 p-0">
-      <legend className="mb-2.5 text-sm font-medium">{label}</legend>
+    <fieldset className="flex flex-col gap-2 border-0 p-0">
+      <legend className="mb-2 flex items-baseline gap-2 text-sm font-medium">
+        {label}
+        {hint && <span className="text-xs font-normal text-muted-foreground">{hint}</span>}
+      </legend>
       {children}
     </fieldset>
   )
@@ -71,6 +79,7 @@ function Swatches<T extends string>({
   onSelect,
   shade,
   ramp,
+  cols,
   disabled,
 }: {
   name: string
@@ -78,13 +87,19 @@ function Swatches<T extends string>({
   value: T
   onSelect: (v: T) => void
   shade: 400 | 500
+  /** Columns in the grid. Base colour uses 5 so the row break falls between
+   *  the five neutral ramps and the three tinted ones. */
+  cols: 5 | 6
   /** Which palette ramp an option's swatch comes from. Base colours are named
    *  for the surface they produce, so Sand has to look up `amber`. */
   ramp?: (option: T) => RampName
   disabled?: boolean
 }) {
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-3">
+    <div
+      className="grid justify-start gap-4"
+      style={{ gridTemplateColumns: `repeat(${cols}, 2rem)` }}
+    >
       {options.map((option) => {
         const selected = option === value
         const swatch = PALETTE[ramp ? ramp(option) : (option as RampName)][shade]
@@ -92,7 +107,7 @@ function Swatches<T extends string>({
           <label
             key={option}
             title={titleCase(option)}
-            className="flex w-9 cursor-pointer flex-col items-center gap-1 has-disabled:cursor-not-allowed"
+            className="cursor-pointer has-disabled:cursor-not-allowed"
           >
             <input
               type="radio"
@@ -119,9 +134,7 @@ function Swatches<T extends string>({
                 />
               )}
             </span>
-            <span className="w-full truncate text-center text-[10px] text-muted-foreground">
-              {titleCase(option)}
-            </span>
+            <span className="sr-only">{titleCase(option)}</span>
           </label>
         )
       })}
@@ -193,13 +206,10 @@ export function Sidebar({
     // window is shorter than the controls. Without min-h-0 a flex child
     // refuses to shrink below its content and the last controls become
     // unreachable on a 700px-tall laptop.
-    <div className="flex min-h-0 flex-col gap-5 p-5">
-      <div className="hidden lg:block">
-        <h2 className="text-lg font-semibold tracking-tight">Customize</h2>
-        <p className="text-sm text-muted-foreground">Make it yours.</p>
-      </div>
+    <div className="flex min-h-0 flex-col gap-4 p-5">
+      <h2 className="sr-only">Customize the theme</h2>
 
-      <Group label="Base color">
+      <Group label="Base color" hint={titleCase(theme.baseColor)}>
         <Swatches
           name="base-color"
           options={BASE_COLORS}
@@ -207,17 +217,19 @@ export function Sidebar({
           onSelect={(v) => onChange('baseColor', v)}
           shade={400}
           ramp={(v) => BASE_RAMP[v]}
+          cols={5}
           disabled={disabled}
         />
       </Group>
 
-      <Group label="Theme color">
+      <Group label="Theme color" hint={titleCase(theme.themeColor)}>
         <Swatches
           name="theme-color"
           options={THEME_COLORS}
           value={theme.themeColor}
           onSelect={(v) => onChange('themeColor', v)}
           shade={500}
+          cols={6}
           disabled={disabled}
         />
       </Group>
@@ -261,25 +273,28 @@ export function Sidebar({
         />
       </Group>
 
-      <Group label="Menu color">
-        <Segmented
-          name="menu-color"
-          options={MENU_COLORS}
-          value={theme.menuColor}
-          onSelect={(v) => onChange('menuColor', v)}
-          disabled={disabled}
-        />
-      </Group>
+      {/* Two options each, so they share a row rather than each taking one. */}
+      <div className="grid grid-cols-2 gap-x-4">
+        <Group label="Menu color">
+          <Segmented
+            name="menu-color"
+            options={MENU_COLORS}
+            value={theme.menuColor}
+            onSelect={(v) => onChange('menuColor', v)}
+            disabled={disabled}
+          />
+        </Group>
 
-      <Group label="Menu accent">
-        <Segmented
-          name="menu-accent"
-          options={MENU_ACCENTS}
-          value={theme.menuAccent}
-          onSelect={(v) => onChange('menuAccent', v)}
-          disabled={disabled}
-        />
-      </Group>
+        <Group label="Menu accent">
+          <Segmented
+            name="menu-accent"
+            options={MENU_ACCENTS}
+            value={theme.menuAccent}
+            onSelect={(v) => onChange('menuAccent', v)}
+            disabled={disabled}
+          />
+        </Group>
+      </div>
 
       <div className="mt-auto flex items-center gap-3 pt-2">
         <Button onClick={onShuffle} disabled={disabled} className="flex-1 gap-2">
