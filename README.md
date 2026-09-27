@@ -53,7 +53,8 @@ each with the alternative it beat.
 **One typed theme object** ([#1](./DECISIONS.md)). Every setting is a field on
 `Theme`, and the option lists are `as const` with the types derived from them, so
 adding a swatch widens the type, the URL validator, the Shuffle space and the
-sidebar together.
+sidebar together. The one list that is not derived — Shuffle's grouping of base
+colours by how they read — has a test asserting it stays complete.
 
 **Tokens reach the preview through CSS variables on a wrapper, never `:root`**
 ([#3](./DECISIONS.md)). shadcn declares its tokens inside Tailwind's

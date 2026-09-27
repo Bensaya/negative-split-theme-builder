@@ -7,7 +7,10 @@ for someone who does not work in frontend daily.
 **Decision:** Every setting lives in a single `Theme`; the option lists are
 `as const` and the types derive from them (`src/theme/theme.ts`).
 **Why:** Adding an option widens the type, the URL validator, the Shuffle space
-and the sidebar at once, so those four cannot drift apart.
+and the sidebar at once, so those four cannot drift apart. One list is not
+derived — Shuffle groups base colours by how they read (#16) — and a test
+asserts that grouping still covers `BASE_COLORS` exactly, because a base colour
+Shuffle could never produce would otherwise go unnoticed.
 **Alternative rejected:** Loose strings with a separate list of valid values;
 nothing then stops the URL parser accepting a radius the sidebar cannot show.
 
