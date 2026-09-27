@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { shuffleTheme } from './shuffle'
+import { BASE_LOOKS, shuffleTheme } from './shuffle'
 import { BASE_COLORS, DEFAULT_THEME, RADII, THEME_COLORS, type Theme } from './theme'
 import { BUNDLED_FAMILIES } from '@/fonts/catalog'
 
@@ -71,6 +71,25 @@ describe('shuffleTheme', () => {
     const t = shuffleTheme(current, seq(0))
     expect(t).not.toEqual(current)
     expect(t.themeColor).not.toBe(current.themeColor)
+  })
+
+  it('groups every base colour into exactly one look', () => {
+    // Shuffle draws a look first and a ramp inside it second, so this is the
+    // one list a new swatch does not widen by itself. A base colour missing
+    // here is one Shuffle can never produce.
+    const grouped = BASE_LOOKS.flat()
+    expect([...grouped].sort()).toEqual([...BASE_COLORS].sort())
+    expect(grouped).toHaveLength(new Set(grouped).size)
+  })
+
+  it('shows a different look most of the time, not the same grey store', () => {
+    // Five of the eight base colours are near-identical neutrals. Drawn flat,
+    // five shuffles in eight would look like the base never changed.
+    let tinted = 0
+    for (let i = 0; i < 2000; i++) {
+      if (shuffleTheme(DEFAULT_THEME).baseColor !== 'neutral') tinted++
+    }
+    expect(tinted / 2000).toBeGreaterThan(0.9)
   })
 
   it('is deterministic for a given random source', () => {

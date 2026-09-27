@@ -1,10 +1,10 @@
 import { BUNDLED_FAMILIES } from '@/fonts/catalog'
 import {
-  BASE_COLORS,
   MENU_ACCENTS,
   MENU_COLORS,
   RADII,
   THEME_COLORS,
+  type BaseColor,
   type Theme,
 } from './theme'
 
@@ -44,6 +44,28 @@ const BODY_FONTS = BUNDLED_FAMILIES.filter(
   (f) => f.category === 'sans-serif' || f.category === 'serif',
 ).map((f) => f.family)
 
+/**
+ * Base colours grouped by how they actually read.
+ *
+ * Drawing uniformly from all eight sounds fairer and looks broken: the five
+ * neutral ramps are within 3 RGB points of each other at the page surface, so
+ * five draws in eight produce the same grey store and the base control appears
+ * to do nothing. Grouping makes Shuffle pick a *look* first and a ramp inside
+ * it second, which is the same reasoning as the curated font pools - the point
+ * of the button is to show the range, and a reviewer pressing it five times
+ * should see four different stores.
+ *
+ * Exported so a test can assert it still covers BASE_COLORS exactly. This is
+ * the one place a new swatch does NOT reach on its own, and a base colour
+ * Shuffle can never produce would be invisible without that check.
+ */
+export const BASE_LOOKS: readonly (readonly BaseColor[])[] = [
+  ['neutral', 'slate', 'gray', 'zinc', 'stone'],
+  ['sand'],
+  ['sage'],
+  ['ice'],
+]
+
 export function shuffleTheme(current: Theme, rand: Rand = Math.random): Theme {
   const headingFont = pick(HEADING_FONTS, rand)
 
@@ -56,7 +78,7 @@ export function shuffleTheme(current: Theme, rand: Rand = Math.random): Theme {
   )
 
   const next: Theme = {
-    baseColor: pick(BASE_COLORS, rand),
+    baseColor: pick(pick(BASE_LOOKS, rand), rand),
     themeColor: pick(THEME_COLORS, rand),
     headingFont,
     bodyFont,
