@@ -188,6 +188,23 @@ hand and are not re-run by CI.
 **Alternative rejected:** Component tests for every control; hours asserting
 that a click calls a setter, competing with the design work the brief grades.
 
+## 15. The page takes the base tint; cards stay white
+**Decision:** `--background` is the chosen base ramp's `50`, while `--card` and
+`--popover` stay pure white. Product photography sits on `bg-card` rather than
+on the page.
+**Why:** the base colour was previously invisible. Every large surface was
+hardcoded white, and Tailwind's five neutral ramps are near-achromatic at light
+steps — 3 RGB points apart at `50`, 6 at `100`. Putting the tint on the biggest
+surface is the only place it registers at all, and splitting page from card
+gives the storefront a second benefit it was missing: cards now read as objects
+instead of dissolving into the page, and the white-background studio shots stop
+floating as bare rectangles.
+**Alternative rejected:** amplifying the ramp's hue to make the difference
+obvious. It would work, and it would mean the colours are no longer Tailwind's
+own (#5) — a large change to defend for a control the brief describes as a
+neutral choice. The honest answer is that base colour is a temperature control,
+most visible with the menu inverted, where the ramp's `950` step carries it.
+
 ## Deferred, deliberately
 - **Dark mode.** Doing it properly doubles every colour decision and every
   contrast check, and the brief does not ask for it. The `.dark` block was

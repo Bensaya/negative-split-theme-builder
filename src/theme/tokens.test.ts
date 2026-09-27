@@ -41,9 +41,21 @@ describe('resolveTokens', () => {
     it('changing base colour moves the neutrals but not the primary', () => {
       const a = resolveTokens(withTheme({ baseColor: 'neutral' }))
       const b = resolveTokens(withTheme({ baseColor: 'slate' }))
+      expect(a['--background']).not.toBe(b['--background'])
       expect(a['--muted']).not.toBe(b['--muted'])
       expect(a['--border']).not.toBe(b['--border'])
       expect(a['--primary']).toBe(b['--primary'])
+    })
+
+    it('tints the page from the base ramp and keeps cards white', () => {
+      // The page surface is where the base colour is actually visible. If it
+      // ever goes back to white, the control stops doing anything a person
+      // can see, which is how this started.
+      for (const baseColor of BASE_COLORS) {
+        const t = resolveTokens(withTheme({ baseColor }))
+        expect(t['--background']).toBe(PALETTE[baseColor][50])
+        expect(t['--card']).not.toBe(t['--background'])
+      }
     })
 
     it('changing theme colour moves the primary but not the neutrals', () => {

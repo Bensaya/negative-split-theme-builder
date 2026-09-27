@@ -169,7 +169,7 @@ function Grid() {
             <img
               src={p.image}
               alt={p.alt}
-              className="product-image aspect-[4/3] w-full rounded-lg border border-border object-contain"
+              className="product-image aspect-[4/3] w-full rounded-lg border border-border bg-card object-contain"
               loading="lazy"
             />
             <h3 className="font-heading mt-3 text-base font-semibold">{p.name}</h3>

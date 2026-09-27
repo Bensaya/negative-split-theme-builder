@@ -112,7 +112,13 @@ export function resolveTokens(theme: Theme): ThemeTokens {
   const lightest = base[50]
   const darkest = base[950]
 
-  const background = 'oklch(100% 0 none)'
+  // The page carries the base ramp's own tint; card surfaces stay white so
+  // they read as objects lifted off it. A white page would have made the base
+  // colour almost invisible - Tailwind's five neutral ramps differ by only a
+  // few RGB points at these light steps, so the largest surface has to be the
+  // one that takes the tint.
+  const background = base[50]
+  const surface = 'oklch(100% 0 none)'
   const foreground = base[950]
 
   const primary = pickPrimary(theme.themeColor, lightest, darkest)
@@ -136,9 +142,9 @@ export function resolveTokens(theme: Theme): ThemeTokens {
   return {
     '--background': background,
     '--foreground': foreground,
-    '--card': background,
+    '--card': surface,
     '--card-foreground': foreground,
-    '--popover': background,
+    '--popover': surface,
     '--popover-foreground': foreground,
 
     '--primary': primary,
