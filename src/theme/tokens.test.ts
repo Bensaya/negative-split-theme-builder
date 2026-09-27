@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { AA_LARGE, AA_NORMAL, contrastRatio } from './contrast'
+import { AA_LARGE, AA_NORMAL, contrastRatio, oklchToSrgb } from './contrast'
 import { PALETTE } from './palette'
 import { resolveTokens } from './tokens'
 import {
   BASE_COLORS,
+  BASE_RAMP,
   DEFAULT_THEME,
   MENU_ACCENTS,
   MENU_COLORS,
   RADII,
   RADIUS_REM,
   THEME_COLORS,
+  type BaseColor,
   type Theme,
 } from './theme'
 
@@ -53,8 +55,23 @@ describe('resolveTokens', () => {
       // can see, which is how this started.
       for (const baseColor of BASE_COLORS) {
         const t = resolveTokens(withTheme({ baseColor }))
-        expect(t['--background']).toBe(PALETTE[baseColor][50])
+        expect(t['--background']).toBe(PALETTE[BASE_RAMP[baseColor]][50])
         expect(t['--card']).not.toBe(t['--background'])
+      }
+    })
+
+    it('offers base colours a person can actually tell apart', () => {
+      // The five neutral ramps land within 3 RGB points of each other at the
+      // page surface - correct, and invisible. The tinted three exist to fix
+      // that, so the distance is the thing worth asserting: this fails if they
+      // are ever swapped back for another near-achromatic ramp.
+      const page = (baseColor: BaseColor) =>
+        oklchToSrgb(resolveTokens(withTheme({ baseColor }))['--background']).map((v) => v * 255)
+      const apart = (a: number[], b: number[]) => Math.hypot(...a.map((v, i) => v - b[i]))
+
+      const neutral = page('neutral')
+      for (const tinted of ['sand', 'sage', 'ice'] as const) {
+        expect(apart(page(tinted), neutral), tinted).toBeGreaterThan(8)
       }
     })
 

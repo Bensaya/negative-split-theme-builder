@@ -7,8 +7,31 @@
  * and Shuffle - there is no second place to update and no way for them to drift.
  */
 
-export const BASE_COLORS = ['neutral', 'slate', 'gray', 'zinc', 'stone'] as const
+export const BASE_COLORS = [
+  // The five the brief names. Tailwind's neutral ramps, which are
+  // near-achromatic by design.
+  'neutral', 'slate', 'gray', 'zinc', 'stone',
+  // Three tinted neutrals, added because the five above are only 3 RGB points
+  // apart at the light steps a storefront is built from: the control was
+  // correct and invisible. See DECISIONS.md #16.
+  'sand', 'sage', 'ice',
+] as const
 export type BaseColor = (typeof BASE_COLORS)[number]
+
+/**
+ * Which Tailwind ramp each base colour draws from.
+ *
+ * The five neutrals map to themselves. The three tinted ones are named for the
+ * surface they produce rather than for their ramp, because `amber` and `cyan`
+ * are already *theme* colours and a control offering "Amber" in both lists
+ * would be describing two different things with one word. The URL keeps these
+ * names, so `base=sand` stays readable and stays stable if the ramp behind it
+ * is ever retuned.
+ */
+export const BASE_RAMP = {
+  neutral: 'neutral', slate: 'slate', gray: 'gray', zinc: 'zinc', stone: 'stone',
+  sand: 'amber', sage: 'emerald', ice: 'sky',
+} as const satisfies Record<BaseColor, string>
 
 export const THEME_COLORS = [
   'lime', 'blue', 'rose', 'amber', 'cyan',

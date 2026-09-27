@@ -4,9 +4,10 @@ import { FontPicker } from './FontPicker'
 import type { FontStatus } from '@/fonts/useGoogleFont'
 import type { FontFamily } from '@/fonts/catalog'
 import { pickForeground } from '@/theme/contrast'
-import { PALETTE } from '@/theme/palette'
+import { PALETTE, type RampName } from '@/theme/palette'
 import {
   BASE_COLORS,
+  BASE_RAMP,
   DEFAULT_THEME,
   MENU_ACCENTS,
   MENU_COLORS,
@@ -69,6 +70,7 @@ function Swatches<T extends string>({
   value,
   onSelect,
   shade,
+  ramp,
   disabled,
 }: {
   name: string
@@ -76,13 +78,16 @@ function Swatches<T extends string>({
   value: T
   onSelect: (v: T) => void
   shade: 400 | 500
+  /** Which palette ramp an option's swatch comes from. Base colours are named
+   *  for the surface they produce, so Sand has to look up `amber`. */
+  ramp?: (option: T) => RampName
   disabled?: boolean
 }) {
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-3">
       {options.map((option) => {
         const selected = option === value
-        const swatch = PALETTE[option as keyof typeof PALETTE][shade]
+        const swatch = PALETTE[ramp ? ramp(option) : (option as RampName)][shade]
         return (
           <label
             key={option}
@@ -201,6 +206,7 @@ export function Sidebar({
           value={theme.baseColor}
           onSelect={(v) => onChange('baseColor', v)}
           shade={400}
+          ramp={(v) => BASE_RAMP[v]}
           disabled={disabled}
         />
       </Group>

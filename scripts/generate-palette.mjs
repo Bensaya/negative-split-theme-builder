@@ -20,8 +20,11 @@ const version = JSON.parse(
   readFileSync(path.join(twRoot, 'package.json'), 'utf8'),
 ).version
 
-/** The five neutral ramps the README names as "base colors". */
-const BASE = ['neutral', 'slate', 'gray', 'zinc', 'stone']
+/** Ramps offered as "base color": the five neutral ones the README names,
+ *  plus three tinted ramps used at their light steps. The neutral five differ
+ *  by about 3 RGB points at shade 50, which is not enough to see, so the
+ *  control needs ramps that carry real chroma. See src/theme/theme.ts. */
+const BASE = ['neutral', 'slate', 'gray', 'zinc', 'stone', 'amber', 'emerald', 'sky']
 
 /** Accent ramps offered as "theme color". Lime/Blue/Rose/Amber/Cyan are the
  *  five the README names; the rest widen the space for Shuffle. */
@@ -45,7 +48,7 @@ function ramp(name) {
 }
 
 const palette = {}
-for (const n of [...BASE, ...ACCENT]) palette[n] = ramp(n)
+for (const n of new Set([...BASE, ...ACCENT])) palette[n] = ramp(n)
 
 const lines = []
 lines.push('/* GENERATED FILE - do not edit by hand.')

@@ -1,6 +1,6 @@
 import { AA_LARGE, AA_NORMAL, contrastRatio, pickForeground } from './contrast'
 import { PALETTE, type RampName } from './palette'
-import { RADIUS_REM, type Theme } from './theme'
+import { BASE_RAMP, RADIUS_REM, type Theme } from './theme'
 
 /**
  * Turns a Theme into the CSS custom properties that re-skin the preview.
@@ -34,6 +34,23 @@ const PRIMARY_SHADES = [500, 600, 700, 800] as const
  * the mid ramp comes first and we fan outwards.
  */
 const ACCENT_SHADES = [500, 600, 400, 700, 300, 800, 200, 900] as const
+
+/**
+ * Shades considered for muted text, lightest first.
+ *
+ * 600 is the design intent and is what all five neutral bases use. The tinted
+ * bases cannot: amber-600 on amber-50 is 3.08:1 and lime-600 is 2.96:1, both
+ * below AA for the product categories and spec lines that use this token. They
+ * settle on 700. Searching rather than hardcoding 700 everywhere keeps the
+ * neutral bases looking exactly as they did.
+ */
+const MUTED_SHADES = [600, 700, 800] as const
+
+/** The lightest step of `ramp` whose text still clears AA on `surface`. */
+function pickMutedOn(surface: string, ramp: RampName): string {
+  const steps = MUTED_SHADES.map((s) => PALETTE[ramp][s])
+  return steps.find((c) => contrastRatio(surface, c) >= AA_NORMAL) ?? steps[steps.length - 1]
+}
 
 /**
  * Picks the brightest step of the chosen accent ramp whose best foreground
@@ -103,7 +120,8 @@ function pickAccentOn(
 export type ThemeTokens = Record<string, string>
 
 export function resolveTokens(theme: Theme): ThemeTokens {
-  const base = PALETTE[theme.baseColor]
+  const baseRamp = BASE_RAMP[theme.baseColor]
+  const base = PALETTE[baseRamp]
 
 
   // Light-mode mapping. The lightest and darkest steps of the chosen base ramp
@@ -133,7 +151,7 @@ export function resolveTokens(theme: Theme): ThemeTokens {
   // white nav: visually present, effectively invisible.
   const menuAccent = pickAccentOn(
     menu,
-    theme.menuAccent === 'bold' ? theme.themeColor : theme.baseColor,
+    theme.menuAccent === 'bold' ? theme.themeColor : baseRamp,
     lightest,
     darkest,
   )
@@ -153,7 +171,7 @@ export function resolveTokens(theme: Theme): ThemeTokens {
     '--secondary': base[100],
     '--secondary-foreground': base[900],
     '--muted': base[100],
-    '--muted-foreground': base[600],
+    '--muted-foreground': pickMutedOn(background, baseRamp),
     '--accent': base[100],
     '--accent-foreground': base[900],
 

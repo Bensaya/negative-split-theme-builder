@@ -69,6 +69,16 @@ writer of the URL, using immediate `replaceState`. The flow is acyclic because
 trigger a read. Parameters are readable and validated per field, so one bad
 value defaults that field alone and never the whole link.
 
+## Eight base colours, not five
+
+The brief names five — Neutral, Slate, Gray, Zinc, Stone. All five are here, and
+they are Tailwind's own ramps, which at the light steps a storefront is built
+from sit about 3 RGB points apart: the control worked and nothing visibly
+happened. Sand, Sage and Ice were added so the setting has a range you can
+actually see, and muted text is now searched for rather than fixed, because the
+tinted ramps fall below AA at the shade the neutrals use.
+[`DECISIONS.md` #15, #16](./DECISIONS.md).
+
 ## Save & Compare
 
 Save a snapshot of the current theme, keep editing, then open a read-only
