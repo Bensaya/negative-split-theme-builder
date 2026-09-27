@@ -71,7 +71,7 @@ WCAG formulas. `pickPrimary()` takes the brightest accent step that clears AA;
 **Why:** oklch's `L` is perceptual lightness, not WCAG luminance — close enough
 to look right, wrong often enough to ship unreadable text. Both searches came
 from tests: a fixed shade put `rose-600` at ~4.4:1, and checking only accent
-visibility left the bag count unreadable in 14 of 240 combinations.
+visibility left the bag count unreadable in fourteen combinations.
 **Alternative rejected:** Thresholding oklch's `L` with one hardcoded shade per
 role; three lines, and either too dark everywhere or below AA somewhere.
 

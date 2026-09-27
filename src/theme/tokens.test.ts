@@ -96,7 +96,8 @@ describe('resolveTokens', () => {
           }
         }
       }
-      expect(failures, `${failures.length} of 60 combinations fail AA`).toEqual([])
+      const total = BASE_COLORS.length * THEME_COLORS.length
+      expect(failures, `${failures.length} of ${total} combinations fail AA`).toEqual([])
     })
 
     it('keeps body text on the background well clear of AA', () => {

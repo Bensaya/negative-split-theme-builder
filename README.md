@@ -95,8 +95,9 @@ storefront with a second token set. Details and the one-snapshot tradeoff are in
 ## Testing
 
 ```bash
-npm test          # unit and hook tests
-npm run test:e2e  # Playwright
+npm test                         # unit and hook tests
+npx playwright install chromium  # once, before the first e2e run
+npm run test:e2e                 # Playwright
 ```
 
 Unit tests cover the pure modules, where correctness is subtle and invisible:
@@ -111,11 +112,11 @@ keyboard navigation in the font picker across the virtualised boundary.
 
 Two defects worth naming, both caught by tests before any UI existed:
 
-- An exhaustive check across all 60 base × theme combinations found `rose-600`
+- An exhaustive check across every base × theme combination found `rose-600`
   and `fuchsia-600` at ~4.4:1 — below AA, and close enough that nobody would
   have seen it by eye.
 - Checking only whether the menu accent was *visible* left the bag count
-  unreadable in 14 of 240 combinations.
+  unreadable in fourteen combinations.
 
 ### How I used AI
 
