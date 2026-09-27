@@ -63,8 +63,8 @@ resolved on the element itself. Inheritance does the propagation — there is no
 "apply the theme" code, the builder's own chrome stays on the default theme, and
 two themes can coexist on one page, which is what Save & Compare uses.
 
-**React owns the theme; the URL is a projection of it** ([#8](./DECISIONS.md),
-[#9](./DECISIONS.md)). Every edit goes through one `applyTheme()`, the only
+**React owns the theme; the URL is a projection of it** ([#9](./DECISIONS.md),
+[#10](./DECISIONS.md)). Every edit goes through one `applyTheme()`, the only
 writer of the URL, using immediate `replaceState`. The flow is acyclic because
 `pushState` and `replaceState` do not fire `popstate`, so a write can never
 trigger a read. Parameters are readable and validated per field, so one bad
@@ -72,13 +72,11 @@ value defaults that field alone and never the whole link.
 
 ## Eight base colours, not five
 
-The brief names five — Neutral, Slate, Gray, Zinc, Stone. All five are here, and
-they are Tailwind's own ramps, which at the light steps a storefront is built
-from sit about 3 RGB points apart: the control worked and nothing visibly
-happened. Sand, Sage and Ice were added so the setting has a range you can
-actually see, and muted text is now searched for rather than fixed, because the
-tinted ramps fall below AA at the shade the neutrals use.
-[`DECISIONS.md` #15, #16](./DECISIONS.md).
+The brief names five. All five are here — they are Tailwind's neutral ramps,
+which sit about three RGB points apart at the steps a storefront uses, so the
+control worked and nothing visible happened. Sand, Sage and Ice were added to
+give the setting a range you can see.
+[`DECISIONS.md` #6](./DECISIONS.md).
 
 ## Save & Compare
 
@@ -90,7 +88,7 @@ the thing you liked — and comparison is what makes it safe.
 It reuses what exists: a snapshot is a `Theme`, so it serialises through the
 same `encode()` as the shareable URL, and the comparison renders the same
 storefront with a second token set. Details and the one-snapshot tradeoff are in
-[`DECISIONS.md` #13](./DECISIONS.md).
+[`DECISIONS.md` #14](./DECISIONS.md).
 
 ## Testing
 
